@@ -75,6 +75,10 @@
     .filter-divider { width: 1px; height: 14px; background: #d1d5db; margin: 0 2px; }
     .reset-btn { background: transparent; border: none; color: var(--text-sub); font-size: 11px; text-decoration: underline; cursor: pointer; margin-left: 6px; }
 
+    /* 엑셀 다운로드 버튼 */
+    .excel-btn { background: #15803d; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.15s; }
+    .excel-btn:hover { background: #166534; }
+
     .view-panel { display: none; }
     .view-panel.active { display: block; }
     .panel-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; padding: 20px; }
@@ -200,10 +204,13 @@
 <div class="container">
   <header>
     <h1>🏭 생산·입고 통합 일정 관리</h1>
-    <div class="legend">
-      <div class="legend-item"><span class="dot" style="background: var(--color-sub);"></span>부자재 (케이스·카드·트레이·원단·성형물)</div>
-      <div class="legend-item"><span class="dot" style="background: var(--color-semi);"></span>반제품 (선행 입고 우선 정렬)</div>
-      <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="legend">
+        <div class="legend-item"><span class="dot" style="background: var(--color-sub);"></span>부자재 (케이스·카드·트레이·원단·성형물)</div>
+        <div class="legend-item"><span class="dot" style="background: var(--color-semi);"></span>반제품 (선행 입고 우선 정렬)</div>
+        <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장</div>
+      </div>
+      <button type="button" class="excel-btn" onclick="exportToExcelCSV()">📊 수량·일정 엑셀 다운로드</button>
     </div>
   </header>
 
@@ -436,6 +443,75 @@
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
     renderAll();
+  }
+
+  // 비고란에서 수량(숫자)과 단위 분리 파싱 및 엑셀(CSV) 내보내기
+  function parseQtyAndUnit(noteStr) {
+    if (!noteStr) return { qty: '', unit: '' };
+    const match = noteStr.match(/([\d,]+(?:\.\d+)?)\s*([가-힣a-zA-Z%]*)/);
+    if (match) {
+      return {
+        qty: match[1].replace(/,/g, ''), // 엑셀에서 바로 합계 계산 가능하도록 콤마 제거한 순수 숫자
+        unit: match[2] || ''
+      };
+    }
+    return { qty: '', unit: '' };
+  }
+
+  function exportToExcelCSV() {
+    const targetData = [...schedules]
+      .filter(item => matchFilter(item))
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    if (targetData.length === 0) {
+      alert('내보낼 일정 데이터가 없습니다.');
+      return;
+    }
+
+    const headers = ['입고/완료여부', '제품명', '구분', '부자재종류', '협력사', '세부품목/작업명', '시작일', '종료일', '수량(숫자)', '단위', '원본비고', '진행상태'];
+    
+    const escapeCSV = (val) => {
+      const str = String(val ?? '');
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = targetData.map(item => {
+      const isDone = item.status === '완료';
+      const checkText = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
+      const subCats = getItemSubCats(item).join(' / ');
+      const { qty, unit } = parseQtyAndUnit(item.note);
+
+      return [
+        checkText,
+        item.product,
+        typeInfoMap[item.type] || item.type,
+        subCats,
+        item.vendor || '',
+        item.title,
+        item.start,
+        item.end,
+        qty,
+        unit,
+        item.note || '',
+        item.status
+      ].map(escapeCSV).join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `생산입고_수량일정표_${todayStr}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   // 1. 달력 뷰
@@ -676,7 +752,7 @@
       });
   }
 
-  // 4. 리스트 뷰 (입고여부 체크박스 포함)
+  // 4. 리스트 뷰
   function renderList() {
     const tbody = document.getElementById('list-content');
     tbody.innerHTML = '';
@@ -725,7 +801,6 @@
 
   const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
 
-  // 입고여부 체크박스 토글 핸들러
   function toggleReceiveStatus(id, isChecked) {
     const item = schedules.find(s => s.id === id);
     if (item) {
