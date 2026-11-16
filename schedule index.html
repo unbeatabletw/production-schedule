@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>생산·입고 통합 일정 관리 시스템</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-sub: #6b7280;
+      --border-color: #e5e7eb;
+
+      --color-sub: #2563eb;      /* 부자재 (파랑) */
+      --bg-sub: #eff6ff;
+
+      --color-semi: #d97706;     /* 반제품 (주황) */
+      --bg-semi: #fffbeb;
+
+      --color-pack: #059669;     /* 포장 (초록) */
+      --bg-pack: #ecfdf5;
+      
+      --color-accent: #4f46e5;   /* 수정 모드 강조 색상 */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; padding-bottom: 50px; }
+    .container { max-width: 1480px; margin: 0 auto; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 22px; font-weight: 800; }
+    
+    .legend { display: flex; gap: 12px; font-size: 12px; font-weight: 600; background: #fff; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color); }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+    /* 입력 폼 영역 */
+    .form-card { background: var(--card-bg); padding: 18px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; transition: all 0.3s; }
+    .form-card.edit-mode { border-color: var(--color-accent); background-color: #fdfdff; box-shadow: 0 0 10px rgba(79, 70, 229, 0.15); }
+    .form-header { display: none; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .form-card.edit-mode .form-header { display: flex; }
+    .edit-mode-title { font-size: 13px; font-weight: 700; color: var(--color-accent); background: #e0e7ff; padding: 4px 10px; border-radius: 4px; }
+    .cancel-edit-btn { background: none; border: none; color: var(--text-sub); text-decoration: underline; cursor: pointer; font-size: 12px; }
+
+    .form-grid { display: grid; grid-template-columns: 1.2fr 0.9fr 2.2fr 1.1fr 1.5fr 0.95fr 0.95fr 0.9fr auto; gap: 8px; align-items: end; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 11px; font-weight: 700; color: var(--text-sub); }
+    input[type="text"], input[type="date"], select { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; width: 100%; height: 35px; }
+    input:focus, select:focus { outline: 2px solid var(--color-accent); border-color: transparent; }
+    input:disabled, select:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+    
+    /* 부자재 다중 선택 체크박스 그룹 */
+    .multi-select-box { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 35px; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 6px; background: #fff; }
+    .multi-select-box.disabled { background: #f3f4f6; opacity: 0.6; pointer-events: none; }
+    .chk-pill { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px; border: 1px solid #d1d5db; background: #f9fafb; color: #4b5563; cursor: pointer; user-select: none; transition: 0.15s; }
+    .chk-pill:hover { background: #f3f4f6; }
+    .chk-pill input { display: none; }
+    .chk-pill.checked { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+
+    button.action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; height: 35px; font-size: 13px; white-space: nowrap; }
+    button#submit-btn { background: #111827; color: #fff; }
+    button#submit-btn:hover { background: #374151; }
+    button#submit-btn.edit-mode-btn { background: var(--color-accent); }
+
+    /* 툴바 & 필터 */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+    .view-tabs { display: flex; background: #e5e7eb; padding: 3px; border-radius: 8px; gap: 3px; }
+    .tab-btn { padding: 6px 14px; border: none; background: transparent; border-radius: 6px; font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; transition: 0.2s; }
+    .tab-btn.active { background: #fff; color: var(--text-main); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    
+    .filters { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+    .filter-btn { background: #fff; color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .filter-btn.active { background: #111827; color: #fff; border-color: #111827; }
+    .filter-divider { width: 1px; height: 14px; background: #d1d5db; margin: 0 2px; }
+    .reset-btn { background: transparent; border: none; color: var(--text-sub); font-size: 11px; text-decoration: underline; cursor: pointer; margin-left: 6px; }
+
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+    .panel-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; padding: 20px; }
+
+    /* 부자재 5종 세부 뱃지 스타일 */
+    .subcat-badge { font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block; margin-right: 3px; margin-bottom: 2px; }
+    .subcat-케이스 { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .subcat-카드 { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+    .subcat-트레이 { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
+    .subcat-원단 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .subcat-성형물 { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+
+    .vendor-badge { background: #f1f5f9; color: #334155; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; display: inline-block; border: 1px solid #cbd5e1; }
+
+    /* 1. 달력 뷰 */
+    .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .cal-header h2 { font-size: 16px; font-weight: 800; }
+    .cal-nav button { padding: 4px 8px; border: 1px solid var(--border-color); background: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-left: 1px solid var(--border-color); border-top: 1px solid var(--border-color); }
+    .cal-cell { min-height: 120px; padding: 4px; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); font-size: 11px; }
+    .cal-day-name { text-align: center; font-weight: 700; padding: 6px 0; background: #f9fafb; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); font-size: 11px; }
+    .cal-day-name:nth-child(7n) { color: #0284c7; }
+    .cal-day-name:nth-child(7n+1) { color: #dc2626; }
+    .cal-cell.other-month { background: #f9fafb; opacity: 0.4; }
+    .cal-cell.today { background: #fffbeb; }
+    .date-num { font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .today-tag { background: #111827; color: #fff; padding: 1px 4px; border-radius: 4px; font-size: 9px; font-weight: 600; }
+    .cal-event { padding: 4px 5px; border-radius: 4px; margin-bottom: 3px; cursor: pointer; border-left: 3px solid transparent; font-weight: 600; line-height: 1.3; }
+    .cal-event:hover { filter: brightness(0.95); }
+    .cal-event.sub { background: var(--bg-sub); color: var(--color-sub); border-left-color: var(--color-sub); }
+    .cal-event.semi { background: var(--bg-semi); color: var(--color-semi); border-left-color: var(--color-semi); }
+    .cal-event.pack { background: var(--bg-pack); color: var(--color-pack); border-left-color: var(--color-pack); }
+    .cal-event.done { opacity: 0.55; text-decoration: line-through; }
+
+    /* 2. 제품별 공정표 */
+    .product-timeline-container { display: flex; flex-direction: column; gap: 20px; }
+    .product-lane { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+    .lane-header { font-size: 15px; font-weight: 800; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    .lane-stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; position: relative; }
+    .lane-stages::before { content: ''; position: absolute; top: 40%; left: 15%; right: 15%; height: 2px; background: #e5e7eb; z-index: 0; }
+    
+    .stage { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; z-index: 1; position: relative; }
+    .stage-type-label { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .stage-box.sub .stage-type-label { color: var(--color-sub); }
+    .stage-box.semi .stage-type-label { color: var(--color-semi); }
+    .stage-box.pack .stage-type-label { color: var(--color-pack); }
+    
+    .stage-item { background: #f9fafb; border-radius: 6px; padding: 8px; margin-bottom: 8px; border-left: 3px solid #d1d5db; position: relative; cursor: pointer; }
+    .stage-item:hover { background: #f3f4f6; }
+    .stage-item.sub { border-left-color: var(--color-sub); }
+    .stage-item.semi { border-left-color: var(--color-semi); }
+    .stage-item.pack { border-left-color: var(--color-pack); }
+    .stage-item.done { opacity: 0.6; }
+    
+    .s-badges { margin-bottom: 3px; padding-right: 40px; }
+    .s-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; padding-right: 36px; }
+    .s-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 3px; }
+    .s-date { font-size: 11px; color: var(--text-sub); font-weight: 600; }
+    .s-note { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+    .s-status { font-size: 9px; font-weight: 700; position: absolute; top: 8px; right: 8px; color: var(--text-sub); background: #fff; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-color); }
+    
+    .empty-stage { font-size: 11px; color: var(--text-sub); text-align: center; padding: 20px 0; background: #f9fafb; border-radius: 6px; border: 1px dashed var(--border-color); }
+    
+    /* 3. 리스트 뷰 */
+    .list-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .list-table th { text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-sub); font-weight: 700; background: #f9fafb; }
+    .list-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .badge { padding: 3px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; display: inline-block; margin-bottom: 2px; }
+    .badge.sub { background: var(--bg-sub); color: var(--color-sub); }
+    .badge.semi { background: var(--bg-semi); color: var(--color-semi); }
+    .badge.pack { background: var(--bg-pack); color: var(--color-pack); }
+    .row-actions { display: flex; gap: 6px; }
+    .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; opacity: 0.75; font-size: 14px; }
+    .icon-btn:hover { opacity: 1; }
+
+    /* 4. 다이어그램 뷰 */
+    .diagram-container { display: flex; flex-direction: column; gap: 24px; }
+    .diag-product-block { border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; background: #fff; }
+    .diag-prod-title { font-size: 15px; font-weight: 800; margin-bottom: 16px; color: var(--color-accent); background: #e0e7ff; padding: 6px 14px; border-radius: 20px; display: inline-block; }
+    
+    .diag-flow { display: flex; align-items: stretch; justify-content: center; gap: 15px; flex-wrap: wrap; }
+    .diag-box { width: 265px; border-radius: 10px; padding: 14px; border: 2px solid; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+    .diag-box.sub { background: var(--bg-sub); border-color: var(--color-sub); }
+    .diag-box.semi { background: var(--bg-semi); border-color: var(--color-semi); }
+    .diag-box.pack { background: var(--bg-pack); border-color: var(--color-pack); }
+    
+    .diag-type { font-size: 11px; font-weight: 800; }
+    .diag-box.sub .diag-type { color: var(--color-sub); }
+    .diag-box.semi .diag-type { color: var(--color-semi); }
+    .diag-box.pack .diag-type { color: var(--color-pack); }
+
+    .diag-item-card { background: #fff; padding: 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); font-size: 11px; }
+    .diag-item-card + .diag-item-card { margin-top: 6px; }
+    .diag-title { font-weight: 700; color: #111; margin-top: 2px; margin-bottom: 3px; }
+    .diag-date { color: var(--text-sub); font-size: 10px; margin-top: 3px; }
+    .diag-empty { font-size: 11px; color: #9ca3af; font-style: italic; text-align: center; padding: 15px 0; }
+
+    .arrow { font-size: 24px; color: #d1d5db; display: flex; align-items: center; justify-content: center; }
+    
+    @media (max-width: 1360px) {
+      .form-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .diag-flow { flex-direction: column; align-items: center; }
+      .arrow { transform: rotate(90deg); }
+      .lane-stages { grid-template-columns: 1fr; gap: 10px; }
+      .lane-stages::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🏭 생산·입고 통합 일정 관리</h1>
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background: var(--color-sub);"></span>부자재 (케이스·카드·트레이·원단·성형물)</div>
+      <div class="legend-item"><span class="dot" style="background: var(--color-semi);"></span>반제품 (선행 입고 우선 정렬)</div>
+      <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장</div>
+    </div>
+  </header>
+
+  <!-- 일정 등록/수정 폼 -->
+  <div class="form-card" id="main-form-card">
+    <div class="form-header">
+      <span class="edit-mode-title">✏️ 일정 수정 모드</span>
+      <button class="cancel-edit-btn" onclick="cancelEdit()">수정 취소</button>
+    </div>
+    <input type="hidden" id="edit-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>제품명 (그룹)</label>
+        <input type="text" id="product" list="product-list" placeholder="예: 더블 크림 50ml" required>
+        <datalist id="product-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>구분</label>
+        <select id="type" onchange="toggleSubInputs()">
+          <option value="sub">부자재 입고</option>
+          <option value="semi">반제품 입고</option>
+          <option value="pack">포장 일정</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>부자재 종류 (다중선택)</label>
+        <div class="multi-select-box" id="subCategory-group">
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="케이스" onchange="syncPillStyles()">케이스</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="카드" onchange="syncPillStyles()">카드</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="트레이" onchange="syncPillStyles()">트레이</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="원단" onchange="syncPillStyles()">원단</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="성형물" onchange="syncPillStyles()">성형물</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>부자재 협력사</label>
+        <input type="text" id="vendor" list="vendor-list" placeholder="예: (주)한국인쇄">
+        <datalist id="vendor-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>세부 품목/작업명</label>
+        <input type="text" id="title" placeholder="예: 단상자 및 트레이 입고" required>
+      </div>
+      <div class="form-group">
+        <label>시작일</label>
+        <input type="date" id="startDate" required>
+      </div>
+      <div class="form-group">
+        <label>종료일</label>
+        <input type="date" id="endDate" required>
+      </div>
+      <div class="form-group">
+        <label>수량/비고</label>
+        <input type="text" id="note" placeholder="예: 10,000 EA">
+      </div>
+      <button type="button" class="action-btn" id="submit-btn" onclick="handleFormSubmit()">+ 일정 추가</button>
+    </div>
+  </div>
+
+  <!-- 툴바 & 필터 -->
+  <div class="toolbar">
+    <div class="view-tabs">
+      <button class="tab-btn active" onclick="switchView('calendar', this)">📅 달력</button>
+      <button class="tab-btn" onclick="switchView('timeline', this)">📦 공정표</button>
+      <button class="tab-btn" onclick="switchView('diagram', this)">📊 다이어그램</button>
+      <button class="tab-btn" onclick="switchView('list', this)">📋 리스트</button>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
+      <button class="filter-btn" onclick="setFilter('sub', this)">부자재 전체</button>
+      <button class="filter-btn" onclick="setFilter('sub:케이스', this)">케이스</button>
+      <button class="filter-btn" onclick="setFilter('sub:카드', this)">카드</button>
+      <button class="filter-btn" onclick="setFilter('sub:트레이', this)">트레이</button>
+      <button class="filter-btn" onclick="setFilter('sub:원단', this)">원단</button>
+      <button class="filter-btn" onclick="setFilter('sub:성형물', this)">성형물</button>
+      <span class="filter-divider"></span>
+      <button class="filter-btn" onclick="setFilter('semi', this)">반제품</button>
+      <button class="filter-btn" onclick="setFilter('pack', this)">포장</button>
+      <button class="reset-btn" onclick="resetData()">샘플 초기화</button>
+    </div>
+  </div>
+
+  <!-- 달력 뷰 -->
+  <div id="view-calendar" class="view-panel active panel-card">
+    <div class="cal-header">
+      <h2 id="cal-title"></h2>
+      <div class="cal-nav">
+        <button onclick="moveMonth(-1)">◀ 이전</button>
+        <button onclick="moveMonth(0)">오늘</button>
+        <button onclick="moveMonth(1)">다음 ▶</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="cal-content"></div>
+  </div>
+
+  <!-- 공정표 뷰 -->
+  <div id="view-timeline" class="view-panel panel-card">
+    <div class="product-timeline-container" id="timeline-content"></div>
+  </div>
+
+  <!-- 다이어그램 뷰 -->
+  <div id="view-diagram" class="view-panel panel-card">
+    <div class="diagram-container" id="diagram-content"></div>
+  </div>
+
+  <!-- 리스트 뷰 -->
+  <div id="view-list" class="view-panel panel-card">
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>제품명</th>
+          <th>구분 / 부자재 종류</th>
+          <th>협력사</th>
+          <th>세부 품목 / 작업명</th>
+          <th>일정 기간</th>
+          <th>수량 / 비고</th>
+          <th>상태</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="list-content"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'production_scheduler_data_v7';
+  
+  const defaultSchedules = [
+    { id: 1, product: '더블 모이스처 크림 50ml', type: 'semi', subCategories: [], vendor: '', title: '크림 벌크 반제품 입고 (선행)', start: '2026-11-15', end: '2026-11-15', note: '500 kg', status: '완료' },
+    { id: 2, product: '더블 모이스처 크림 50ml', type: 'sub', subCategories: ['케이스', '카드'], vendor: '대성인쇄(주)', title: '단상자 케이스 및 설명카드 입고', start: '2026-11-16', end: '2026-11-17', note: '10,000 SET', status: '진행중' },
+    { id: 3, product: '더블 모이스처 크림 50ml', type: 'pack', subCategories: [], vendor: '', title: '본품 충진 및 세트 포장', start: '2026-11-24', end: '2026-11-26', note: '1라인 가동', status: '예정' },
+    { id: 4, product: '프리미엄 마스크팩 세트', type: 'sub', subCategories: ['원단'], vendor: '대한텍스타일', title: '부직포 원단 입고 (선행)', start: '2026-11-14', end: '2026-11-15', note: '20,000 매', status: '예정' },
+    { id: 5, product: '프리미엄 마스크팩 세트', type: 'semi', subCategories: [], vendor: '', title: '마스크팩 에센스 반제품 입고', start: '2026-11-18', end: '2026-11-18', note: '300 kg', status: '예정' },
+    { id: 6, product: '프리미엄 마스크팩 세트', type: 'pack', subCategories: [], vendor: '', title: '에센스 함침 및 파우치 포장', start: '2026-11-25', end: '2026-11-27', note: '3라인 가동', status: '예정' }
+  ];
+
+  let schedules = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultSchedules;
+  let currentFilter = 'all';
+  let currentView = 'calendar';
+  let calDate = new Date(2026, 10, 16); // 기준일: 2026년 11월
+  let isEditMode = false;
+
+  function getItemSubCats(item) {
+    if (Array.isArray(item.subCategories)) return item.subCategories;
+    if (item.subCategory) return [item.subCategory];
+    return [];
+  }
+
+  function renderSubCatBadges(item) {
+    const cats = getItemSubCats(item);
+    return cats.map(c => `<span class="subcat-badge subcat-${c}">${c}</span>`).join('');
+  }
+
+  function saveAll() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+    renderAll();
+  }
+
+  function resetData() {
+    if(confirm('모든 데이터를 초기 샘플 데이터로 되돌리시겠습니까?')) {
+      schedules = [...defaultSchedules];
+      saveAll();
+    }
+  }
+
+  function syncPillStyles() {
+    document.querySelectorAll('#subCategory-group .chk-pill').forEach(label => {
+      const cb = label.querySelector('input[type="checkbox"]');
+      if (cb.checked) label.classList.add('checked');
+      else label.classList.remove('checked');
+    });
+  }
+
+  function toggleSubInputs() {
+    const type = document.getElementById('type').value;
+    const subCatGroup = document.getElementById('subCategory-group');
+    const vendorInput = document.getElementById('vendor');
+    
+    if (type !== 'sub') {
+      subCatGroup.classList.add('disabled');
+      vendorInput.value = '';
+      vendorInput.disabled = true;
+    } else {
+      subCatGroup.classList.remove('disabled');
+      vendorInput.disabled = false;
+    }
+  }
+
+  function matchFilter(item) {
+    if (currentFilter === 'all') return true;
+    if (currentFilter.startsWith('sub:')) {
+      const targetSubCat = currentFilter.split(':')[1];
+      const cats = getItemSubCats(item);
+      return item.type === 'sub' && cats.includes(targetSubCat);
+    }
+    return item.type === currentFilter;
+  }
+
+  function renderAll() {
+    updateDatalists();
+    renderCalendar();
+    renderTimeline();
+    renderDiagram();
+    renderList();
+  }
+
+  function updateDatalists() {
+    const prodList = document.getElementById('product-list');
+    const products = [...new Set(schedules.map(s => s.product))].sort();
+    prodList.innerHTML = products.map(p => `<option value="${p}">`).join('');
+
+    const vendorList = document.getElementById('vendor-list');
+    const vendors = [...new Set(schedules.map(s => s.vendor).filter(Boolean))].sort();
+    vendorList.innerHTML = vendors.map(v => `<option value="${v}">`).join('');
+  }
+
+  function switchView(viewName, btnElement) {
+    currentView = viewName;
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+    document.getElementById('view-' + viewName).classList.add('active');
+  }
+
+  function setFilter(filterKey, btnElement) {
+    currentFilter = filterKey;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    renderAll();
+  }
+
+  // 1. 달력 뷰
+  function renderCalendar() {
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+    
+    document.getElementById('cal-title').innerText = `${year}년 ${month + 1}월`;
+    const calContent = document.getElementById('cal-content');
+    calContent.innerHTML = '';
+
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    dayNames.forEach(day => {
+      const div = document.createElement('div');
+      div.className = 'cal-day-name';
+      div.innerText = day;
+      calContent.appendChild(div);
+    });
+
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+    const lastDateOfPrevMonth = new Date(year, month, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      calContent.appendChild(createEmptyCell(lastDateOfPrevMonth - firstDayOfMonth + i + 1, true));
+    }
+
+    for (let i = 1; i <= lastDateOfMonth; i++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const cellDiv = document.createElement('div');
+      cellDiv.className = 'cal-cell' + (dateStr === todayStr ? ' today' : '');
+
+      cellDiv.innerHTML = `<div class="date-num"><span>${i}</span> ${dateStr === todayStr ? '<span class="today-tag">오늘</span>' : ''}</div>`;
+
+      const dayEvents = schedules.filter(item => {
+        if (!matchFilter(item)) return false;
+        return dateStr >= item.start && dateStr <= item.end;
+      });
+
+      dayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+      dayEvents.forEach(ev => {
+        const evDiv = document.createElement('div');
+        evDiv.className = `cal-event ${ev.type} ${ev.status === '완료' ? 'done' : ''}`;
+        const cats = getItemSubCats(ev);
+        const subText = cats.length ? `[${cats.join('·')}] ` : '';
+        const vendorText = ev.vendor ? `(${ev.vendor}) ` : '';
+        evDiv.title = `[${ev.product}] ${subText}${vendorText}${ev.title} (${ev.note || ''})`;
+        evDiv.innerHTML = `<strong>${ev.product}</strong><br>${subText}${vendorText}${ev.title}`;
+        evDiv.onclick = (e) => { e.stopPropagation(); loadScheduleForEdit(ev.id); };
+        cellDiv.appendChild(evDiv);
+      });
+
+      calContent.appendChild(cellDiv);
+    }
+
+    const totalCells = firstDayOfMonth + lastDateOfMonth;
+    const nextMonthDays = (7 - (totalCells % 7)) % 7;
+    if (nextMonthDays !== 7) {
+       for (let i = 1; i <= nextMonthDays; i++) {
+        calContent.appendChild(createEmptyCell(i, true));
+      }
+    }
+  }
+
+  function createEmptyCell(dayNum, isOtherMonth = false) {
+    const div = document.createElement('div');
+    div.className = 'cal-cell' + (isOtherMonth ? ' other-month' : '');
+    div.innerHTML = `<div class="date-num"><span>${dayNum}</span></div>`;
+    return div;
+  }
+
+  function moveMonth(delta) {
+    if (delta === 0) calDate = new Date();
+    else calDate.setMonth(calDate.getMonth() + delta);
+    renderCalendar();
+  }
+
+  // 2. 제품별 공정표 (부자재/반제품 중 먼저 들어온 것이 왼쪽/앞쪽에 오도록 동적 배치)
+  function renderTimeline() {
+    const container = document.getElementById('timeline-content');
+    container.innerHTML = '';
+
+    const products = [...new Set(schedules.map(s => s.product))].sort();
+
+    if(products.length === 0) {
+       container.innerHTML = '<div class="empty-stage">등록된 일정이 없습니다.</div>';
+       return;
+    }
+
+    products.forEach(prodName => {
+      const prodSchedules = schedules.filter(s => s.product === prodName && matchFilter(s));
+      if(prodSchedules.length === 0) return;
+
+      const subItems = prodSchedules.filter(s => s.type === 'sub').sort((a, b) => new Date(a.start) - new Date(b.start));
+      const semiItems = prodSchedules.filter(s => s.type === 'semi').sort((a, b) => new Date(a.start) - new Date(b.start));
+      const packItems = prodSchedules.filter(s => s.type === 'pack').sort((a, b) => new Date(a.start) - new Date(b.start));
+
+      // 부자재와 반제품의 최초 시작일(start) 비교하여 선행 공정 순서 결정
+      const earliestSubStart = subItems.length > 0 ? new Date(subItems[0].start) : new Date('9999-12-31');
+      const earliestSemiStart = semiItems.length > 0 ? new Date(semiItems[0].start) : new Date('9999-12-31');
+
+      let firstType = 'sub', firstTitle = '1. 부자재 입고 (선행)', firstItems = subItems, firstKey = 'sub';
+      let secondType = 'semi', secondTitle = '2. 반제품 입고 (후행)', secondItems = semiItems, secondKey = 'semi';
+
+      if (earliestSemiStart < earliestSubStart) {
+        firstType = 'semi'; firstTitle = '1. 반제품 입고 (선행)'; firstItems = semiItems; firstKey = 'semi';
+        secondType = 'sub'; secondTitle = '2. 부자재 입고 (후행)'; secondItems = subItems; secondKey = 'sub';
+      }
+
+      const laneDiv = document.createElement('div');
+      laneDiv.className = 'product-lane';
+      laneDiv.innerHTML = `<div class="lane-header"><span>📦 ${prodName}</span><span style="font-size:11px; color:var(--text-sub); font-weight:500;">* 입고일이 빠른 공정이 앞으로 자동 배치됩니다.</span></div>`;
+      
+      const stagesGrid = document.createElement('div');
+      stagesGrid.className = 'lane-stages';
+
+      // 3단계 컬럼 구성: [선행 입고] -> [후행 입고] -> [포장 일정]
+      const stagesConfig = [
+        { key: firstKey, title: firstTitle, items: firstItems },
+        { key: secondKey, title: secondTitle, items: secondItems },
+        { key: 'pack', title: '3. 포장 / 생산 일정', items: packItems }
+      ];
+
+      stagesConfig.forEach(conf => {
+        const stageDiv = document.createElement('div');
+        stageDiv.className = `stage stage-box ${conf.key}`;
+        
+        let stageContent = `<div class="stage-type-label"><span>${conf.title}</span><span>${conf.items.length}건</span></div>`;
+
+        if (conf.items.length > 0) {
+          conf.items.forEach(item => {
+            const subCatHtml = renderSubCatBadges(item);
+            const vendorHtml = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '';
+            
+            stageContent += `
+              <div class="stage-item ${item.type} ${item.status === '완료' ? 'done' : ''}" onclick="loadScheduleForEdit(${item.id})">
+                ${subCatHtml ? `<div class="s-badges">${subCatHtml}</div>` : ''}
+                <div class="s-title">${item.title}</div>
+                ${vendorHtml ? `<div class="s-meta">${vendorHtml}</div>` : ''}
+                <div class="s-date">📅 ${item.start} ~ ${item.end}</div>
+                ${item.note ? `<div class="s-note">📝 ${item.note}</div>` : ''}
+                <div class="s-status">${item.status}</div>
+              </div>
+            `;
+          });
+        } else {
+          stageContent += `<div class="empty-stage">해당 일정 없음</div>`;
+        }
+        stageDiv.innerHTML = stageContent;
+        stagesGrid.appendChild(stageDiv);
+      });
+
+      laneDiv.appendChild(stagesGrid);
+      container.appendChild(laneDiv);
+    });
+  }
+
+  // 3. 다이어그램 뷰 (부자재 vs 반제품 선행 순서 반영)
+  function renderDiagram() {
+      const container = document.getElementById('diagram-content');
+      container.innerHTML = '';
+
+      const products = [...new Set(schedules.map(s => s.product))].sort();
+
+      if(products.length === 0) {
+          container.innerHTML = '<div class="empty-stage">등록된 일정이 없습니다.</div>';
+          return;
+      }
+
+      products.forEach(prod => {
+          const prodItems = schedules.filter(s => s.product === prod && matchFilter(s));
+          if (prodItems.length === 0) return;
+          
+          const subItems = prodItems.filter(s => s.type === 'sub').sort((a, b) => new Date(a.start) - new Date(b.start));
+          const semiItems = prodItems.filter(s => s.type === 'semi').sort((a, b) => new Date(a.start) - new Date(b.start));
+          const packItems = prodItems.filter(s => s.type === 'pack').sort((a, b) => new Date(a.start) - new Date(b.start));
+
+          const earliestSubStart = subItems.length > 0 ? new Date(subItems[0].start) : new Date('9999-12-31');
+          const earliestSemiStart = semiItems.length > 0 ? new Date(semiItems[0].start) : new Date('9999-12-31');
+
+          let firstStage = { key: 'sub', label: '1. 부자재 입고', items: subItems };
+          let secondStage = { key: 'semi', label: '2. 반제품 입고', items: semiItems };
+
+          if (earliestSemiStart < earliestSubStart) {
+            firstStage = { key: 'semi', label: '1. 반제품 입고', items: semiItems };
+            secondStage = { key: 'sub', label: '2. 부자재 입고', items: subItems };
+          }
+
+          const block = document.createElement('div');
+          block.className = 'diag-product-block';
+          block.innerHTML = `<div class="diag-prod-title">${prod}</div>`;
+
+          const flowDiv = document.createElement('div');
+          flowDiv.className = 'diag-flow';
+
+          const stages = [
+              firstStage,
+              secondStage,
+              { key: 'pack', label: '3. 포장 / 생산', items: packItems }
+          ];
+
+          stages.forEach((stage, index) => {
+              const stageBox = document.createElement('div');
+              stageBox.className = `diag-box ${stage.key}`;
+              
+              let boxHtml = `<div class="diag-type">${stage.label}</div>`;
+
+              if (stage.items.length > 0) {
+                  stage.items.forEach(item => {
+                      const subCatHtml = renderSubCatBadges(item);
+                      const vendorStr = item.vendor ? `<div style="margin-top:3px;"><span class="vendor-badge">🏢 ${item.vendor}</span></div>` : '';
+                      boxHtml += `
+                          <div class="diag-item-card">
+                              ${subCatHtml ? `<div>${subCatHtml}</div>` : ''}
+                              <div class="diag-title">${item.title}</div>
+                              ${vendorStr}
+                              <div class="diag-date">📅 ${item.start} ~ ${item.end}</div>
+                          </div>
+                      `;
+                  });
+              } else {
+                  boxHtml += `<div class="diag-empty">미등록</div>`;
+              }
+
+              stageBox.innerHTML = boxHtml;
+              flowDiv.appendChild(stageBox);
+
+              if (index < stages.length - 1) {
+                  const arrow = document.createElement('div');
+                  arrow.className = 'arrow';
+                  arrow.innerHTML = '&#10132;';
+                  flowDiv.appendChild(arrow);
+              }
+          });
+
+          block.appendChild(flowDiv);
+          container.appendChild(block);
+      });
+  }
+
+  // 4. 리스트 뷰
+  function renderList() {
+    const tbody = document.getElementById('list-content');
+    tbody.innerHTML = '';
+
+    const sortedSchedules = [...schedules].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    sortedSchedules.forEach(item => {
+      if (!matchFilter(item)) return;
+
+      const subCatBadges = renderSubCatBadges(item);
+      const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:800;">${item.product}</td>
+        <td><span class="badge ${item.type}">${typeInfoMap[item.type]}</span><br>${subCatBadges}</td>
+        <td>${vendorDisplay}</td>
+        <td style="font-weight:600;">${item.title}</td>
+        <td style="color:var(--text-sub); font-weight:600;">${item.start} ~ ${item.end}</td>
+        <td>${item.note || '-'}</td>
+        <td>
+          <select onchange="updateStatusInline(${item.id}, this.value)" style="padding:3px 6px; font-size:11px; border-radius:4px; height:auto;">
+            <option value="예정" ${item.status === '예정' ? 'selected' : ''}>예정</option>
+            <option value="진행중" ${item.status === '진행중' ? 'selected' : ''}>진행중</option>
+            <option value="완료" ${item.status === '완료' ? 'selected' : ''}>완료</option>
+          </select>
+        </td>
+        <td class="row-actions">
+          <button class="icon-btn" title="수정" onclick="loadScheduleForEdit(${item.id})">&#9998;</button>
+          <button class="icon-btn" title="삭제" onclick="deleteSchedule(${item.id})">&#128465;</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
+
+  function handleFormSubmit() {
+    if(!validateForm()) return;
+    if (isEditMode) updateSchedule();
+    else addSchedule();
+  }
+
+  function validateForm() {
+      const product = document.getElementById('product').value.trim();
+      const type = document.getElementById('type').value;
+      const title = document.getElementById('title').value.trim();
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+
+      if(!product || !title || !start || !end) {
+          alert('제품명, 품목명, 시작일, 종료일을 모두 입력해주세요.');
+          return false;
+      }
+      if (type === 'sub') {
+          const checkedCats = document.querySelectorAll('input[name="subCat"]:checked');
+          if (checkedCats.length === 0) {
+              alert('부자재 종류(케이스, 카드, 트레이, 원단, 성형물)를 최소 1개 이상 선택해주세요.');
+              return false;
+          }
+      }
+      if (start > end) {
+          alert('종료일은 시작일보다 빠를 수 없습니다.');
+          return false;
+      }
+      return true;
+  }
+
+  function getFormData() {
+    const type = document.getElementById('type').value;
+    const selectedCats = type === 'sub'
+      ? Array.from(document.querySelectorAll('input[name="subCat"]:checked')).map(cb => cb.value)
+      : [];
+
+    return {
+      product: document.getElementById('product').value.trim(),
+      type: type,
+      subCategories: selectedCats,
+      vendor: type === 'sub' ? document.getElementById('vendor').value.trim() : '',
+      title: document.getElementById('title').value.trim(),
+      start: document.getElementById('startDate').value,
+      end: document.getElementById('endDate').value,
+      note: document.getElementById('note').value.trim(),
+    };
+  }
+
+  function setFormData(data) {
+    document.getElementById('product').value = data.product;
+    document.getElementById('type').value = data.type;
+    toggleSubInputs();
+
+    const cats = getItemSubCats(data);
+    document.querySelectorAll('input[name="subCat"]').forEach(cb => {
+      cb.checked = (data.type === 'sub' && cats.includes(cb.value));
+    });
+    syncPillStyles();
+
+    document.getElementById('vendor').value = data.vendor || '';
+    document.getElementById('title').value = data.title;
+    document.getElementById('startDate').value = data.start;
+    document.getElementById('endDate').value = data.end;
+    document.getElementById('note').value = data.note;
+  }
+
+  function resetForm() {
+    document.getElementById('main-form-card').classList.remove('edit-mode');
+    document.getElementById('submit-btn').innerText = '+ 일정 추가';
+    document.getElementById('submit-btn').classList.remove('edit-mode-btn');
+    document.getElementById('edit-id').value = '';
+    document.getElementById('product').value = '';
+    document.getElementById('type').value = 'sub';
+
+    document.querySelectorAll('input[name="subCat"]').forEach(cb => {
+      cb.checked = (cb.value === '케이스');
+    });
+    syncPillStyles();
+    toggleSubInputs();
+
+    document.getElementById('vendor').value = '';
+    document.getElementById('title').value = '';
+    document.getElementById('note').value = '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+    document.getElementById('endDate').value = today;
+    isEditMode = false;
+  }
+
+  function addSchedule() {
+    const newItem = getFormData();
+    newItem.id = Date.now();
+    newItem.status = '예정';
+    schedules.push(newItem);
+    resetForm();
+    saveAll();
+  }
+
+  function loadScheduleForEdit(id) {
+    const item = schedules.find(s => s.id === id);
+    if (!item) return;
+
+    isEditMode = true;
+    document.getElementById('edit-id').value = item.id;
+    setFormData(item);
+    
+    document.getElementById('main-form-card').classList.add('edit-mode');
+    document.getElementById('submit-btn').innerText = '💾 일정 수정 저장';
+    document.getElementById('submit-btn').classList.add('edit-mode-btn');
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    resetForm();
+  }
+
+  function updateSchedule() {
+    const id = parseInt(document.getElementById('edit-id').value);
+    const index = schedules.findIndex(s => s.id === id);
+    if (index === -1) return;
+
+    const updatedData = getFormData();
+    schedules[index] = { id, ...updatedData, status: schedules[index].status };
+
+    resetForm();
+    saveAll();
+  }
+
+  function updateStatusInline(id, newStatus) {
+    const item = schedules.find(s => s.id === id);
+    if(item) {
+      item.status = newStatus;
+      saveAll();
+    }
+  }
+
+  function deleteSchedule(id) {
+    if(confirm('정말로 이 일정을 삭제하시겠습니까?')) {
+      schedules = schedules.filter(s => s.id !== id);
+      resetForm();
+      saveAll();
+    }
+  }
+
+  resetForm();
+  renderAll();
+</script>
+
+</body>
+</html>
