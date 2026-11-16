@@ -142,6 +142,15 @@
     .list-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .list-table th { text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-sub); font-weight: 700; background: #f9fafb; }
     .list-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .list-table tr.row-done td { opacity: 0.55; background-color: #fafafa; }
+    .list-table tr.row-done td.title-cell { text-decoration: line-through; }
+
+    /* 입고여부 체크박스 스타일 */
+    .receive-chk-wrap { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-weight: 700; font-size: 11px; }
+    .receive-chk { width: 17px; height: 17px; accent-color: #059669; cursor: pointer; }
+    .receive-label-done { color: #059669; }
+    .receive-label-wait { color: #9ca3af; }
+
     .badge { padding: 3px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; display: inline-block; margin-bottom: 2px; }
     .badge.sub { background: var(--bg-sub); color: var(--color-sub); }
     .badge.semi { background: var(--bg-semi); color: var(--color-semi); }
@@ -306,6 +315,7 @@
     <table class="list-table">
       <thead>
         <tr>
+          <th style="width: 95px;">입고여부</th>
           <th>제품명</th>
           <th>구분 / 부자재 종류</th>
           <th>협력사</th>
@@ -336,7 +346,7 @@
   let schedules = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultSchedules;
   let currentFilter = 'all';
   let currentView = 'calendar';
-  let calDate = new Date(2026, 10, 16); // 기준일: 2026년 11월
+  let calDate = new Date(2026, 10, 16);
   let isEditMode = false;
 
   function getItemSubCats(item) {
@@ -505,7 +515,7 @@
     renderCalendar();
   }
 
-  // 2. 제품별 공정표 (부자재/반제품 중 먼저 들어온 것이 왼쪽/앞쪽에 오도록 동적 배치)
+  // 2. 제품별 공정표
   function renderTimeline() {
     const container = document.getElementById('timeline-content');
     container.innerHTML = '';
@@ -525,16 +535,15 @@
       const semiItems = prodSchedules.filter(s => s.type === 'semi').sort((a, b) => new Date(a.start) - new Date(b.start));
       const packItems = prodSchedules.filter(s => s.type === 'pack').sort((a, b) => new Date(a.start) - new Date(b.start));
 
-      // 부자재와 반제품의 최초 시작일(start) 비교하여 선행 공정 순서 결정
       const earliestSubStart = subItems.length > 0 ? new Date(subItems[0].start) : new Date('9999-12-31');
       const earliestSemiStart = semiItems.length > 0 ? new Date(semiItems[0].start) : new Date('9999-12-31');
 
-      let firstType = 'sub', firstTitle = '1. 부자재 입고 (선행)', firstItems = subItems, firstKey = 'sub';
-      let secondType = 'semi', secondTitle = '2. 반제품 입고 (후행)', secondItems = semiItems, secondKey = 'semi';
+      let firstTitle = '1. 부자재 입고 (선행)', firstItems = subItems, firstKey = 'sub';
+      let secondTitle = '2. 반제품 입고 (후행)', secondItems = semiItems, secondKey = 'semi';
 
       if (earliestSemiStart < earliestSubStart) {
-        firstType = 'semi'; firstTitle = '1. 반제품 입고 (선행)'; firstItems = semiItems; firstKey = 'semi';
-        secondType = 'sub'; secondTitle = '2. 부자재 입고 (후행)'; secondItems = subItems; secondKey = 'sub';
+        firstTitle = '1. 반제품 입고 (선행)'; firstItems = semiItems; firstKey = 'semi';
+        secondTitle = '2. 부자재 입고 (후행)'; secondItems = subItems; secondKey = 'sub';
       }
 
       const laneDiv = document.createElement('div');
@@ -544,7 +553,6 @@
       const stagesGrid = document.createElement('div');
       stagesGrid.className = 'lane-stages';
 
-      // 3단계 컬럼 구성: [선행 입고] -> [후행 입고] -> [포장 일정]
       const stagesConfig = [
         { key: firstKey, title: firstTitle, items: firstItems },
         { key: secondKey, title: secondTitle, items: secondItems },
@@ -585,7 +593,7 @@
     });
   }
 
-  // 3. 다이어그램 뷰 (부자재 vs 반제품 선행 순서 반영)
+  // 3. 다이어그램 뷰
   function renderDiagram() {
       const container = document.getElementById('diagram-content');
       container.innerHTML = '';
@@ -668,7 +676,7 @@
       });
   }
 
-  // 4. 리스트 뷰
+  // 4. 리스트 뷰 (입고여부 체크박스 포함)
   function renderList() {
     const tbody = document.getElementById('list-content');
     tbody.innerHTML = '';
@@ -678,15 +686,25 @@
     sortedSchedules.forEach(item => {
       if (!matchFilter(item)) return;
 
+      const isDone = item.status === '완료';
       const subCatBadges = renderSubCatBadges(item);
       const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
+      const checkLabel = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
       
       const tr = document.createElement('tr');
+      if (isDone) tr.classList.add('row-done');
+
       tr.innerHTML = `
+        <td>
+          <label class="receive-chk-wrap">
+            <input type="checkbox" class="receive-chk" ${isDone ? 'checked' : ''} onchange="toggleReceiveStatus(${item.id}, this.checked)">
+            <span class="${isDone ? 'receive-label-done' : 'receive-label-wait'}">${checkLabel}</span>
+          </label>
+        </td>
         <td style="font-weight:800;">${item.product}</td>
         <td><span class="badge ${item.type}">${typeInfoMap[item.type]}</span><br>${subCatBadges}</td>
         <td>${vendorDisplay}</td>
-        <td style="font-weight:600;">${item.title}</td>
+        <td class="title-cell" style="font-weight:600;">${item.title}</td>
         <td style="color:var(--text-sub); font-weight:600;">${item.start} ~ ${item.end}</td>
         <td>${item.note || '-'}</td>
         <td>
@@ -706,6 +724,15 @@
   }
 
   const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
+
+  // 입고여부 체크박스 토글 핸들러
+  function toggleReceiveStatus(id, isChecked) {
+    const item = schedules.find(s => s.id === id);
+    if (item) {
+      item.status = isChecked ? '완료' : '예정';
+      saveAll();
+    }
+  }
 
   function handleFormSubmit() {
     if(!validateForm()) return;
