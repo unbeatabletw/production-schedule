@@ -43,7 +43,7 @@
     .edit-mode-title { font-size: 13px; font-weight: 700; color: var(--color-accent); background: #e0e7ff; padding: 4px 10px; border-radius: 4px; }
     .cancel-edit-btn { background: none; border: none; color: var(--text-sub); text-decoration: underline; cursor: pointer; font-size: 12px; }
 
-    .form-grid { display: grid; grid-template-columns: 1.2fr 0.9fr 2.2fr 1.1fr 1.5fr 0.95fr 0.95fr 0.9fr auto; gap: 8px; align-items: end; }
+    .form-grid { display: grid; grid-template-columns: 1.2fr 0.9fr 2fr 1.1fr 1.6fr 0.95fr 0.95fr auto; gap: 8px; align-items: end; }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     label { font-size: 11px; font-weight: 700; color: var(--text-sub); }
     input[type="text"], input[type="date"], select { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; width: 100%; height: 35px; }
@@ -57,6 +57,12 @@
     .chk-pill:hover { background: #f3f4f6; }
     .chk-pill input { display: none; }
     .chk-pill.checked { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+
+    /* 개별 수량 입력 영역 */
+    .sub-quantities-container { grid-column: span 7; background: #f8fafc; border: 1px dashed var(--border-color); padding: 10px; border-radius: 8px; display: none; margin-top: 4px; }
+    .sub-quantities-container.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+    .sub-qty-item { display: flex; flex-direction: column; gap: 3px; }
+    .sub-qty-item label { font-size: 10px; color: var(--color-sub); font-weight: 800; }
 
     button.action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; height: 35px; font-size: 13px; white-space: nowrap; }
     button#submit-btn { background: #111827; color: #fff; }
@@ -200,9 +206,11 @@
     
     @media (max-width: 1360px) {
       .form-grid { grid-template-columns: repeat(3, 1fr); }
+      .sub-quantities-container { grid-column: span 3; }
     }
     @media (max-width: 768px) {
       .form-grid { grid-template-columns: 1fr; }
+      .sub-quantities-container { grid-column: span 1; }
       .diag-flow { flex-direction: column; align-items: center; }
       .arrow { transform: rotate(90deg); }
       .lane-stages { grid-template-columns: 1fr; gap: 10px; }
@@ -249,11 +257,11 @@
       <div class="form-group">
         <label>부자재 종류 (다중선택)</label>
         <div class="multi-select-box" id="subCategory-group">
-          <label class="chk-pill"><input type="checkbox" name="subCat" value="케이스" onchange="syncPillStyles()">케이스</label>
-          <label class="chk-pill"><input type="checkbox" name="subCat" value="카드" onchange="syncPillStyles()">카드</label>
-          <label class="chk-pill"><input type="checkbox" name="subCat" value="트레이" onchange="syncPillStyles()">트레이</label>
-          <label class="chk-pill"><input type="checkbox" name="subCat" value="원단" onchange="syncPillStyles()">원단</label>
-          <label class="chk-pill"><input type="checkbox" name="subCat" value="성형물" onchange="syncPillStyles()">성형물</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="케이스" onchange="onSubCatChange()">케이스</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="카드" onchange="onSubCatChange()">카드</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="트레이" onchange="onSubCatChange()">트레이</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="원단" onchange="onSubCatChange()">원단</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="성형물" onchange="onSubCatChange()">성형물</label>
         </div>
       </div>
       <div class="form-group">
@@ -273,11 +281,13 @@
         <label>종료일</label>
         <input type="date" id="endDate" required>
       </div>
-      <div class="form-group">
-        <label>수량/비고</label>
-        <input type="text" id="note" placeholder="예: 10,000 EA">
-      </div>
       <button type="button" class="action-btn" id="submit-btn" onclick="handleFormSubmit()">+ 일정 추가</button>
+
+      <!-- 선택된 부자재별 개별 수량 입력 영역 -->
+      <div class="sub-quantities-container" id="subQuantitiesContainer">
+        <div style="grid-column: 1 / -1; font-size: 11px; font-weight: 800; color: var(--color-sub); margin-bottom: 2px;">📦 선택한 부자재별 개별 수량 입력</div>
+        <div id="subQtyInputsList" style="display:contents;"></div>
+      </div>
     </div>
   </div>
 
@@ -378,20 +388,19 @@
 </div>
 
 <script>
-  const STORAGE_KEY = 'production_scheduler_data_v8';
-  const STOCK_STORAGE_KEY = 'production_stock_actuals_v1';
+  const STORAGE_KEY = 'production_scheduler_data_v9';
+  const STOCK_STORAGE_KEY = 'production_stock_actuals_v2';
   
   const defaultSchedules = [
-    { id: 1, product: '더블 모이스처 크림 50ml', type: 'semi', subCategories: [], vendor: '', title: '크림 벌크 반제품 입고 (선행)', start: '2026-11-15', end: '2026-11-15', note: '500 kg', status: '완료' },
-    { id: 2, product: '더블 모이스처 크림 50ml', type: 'sub', subCategories: ['케이스', '카드'], vendor: '대성인쇄(주)', title: '단상자 케이스 및 설명카드 입고', start: '2026-11-16', end: '2026-11-17', note: '10000 SET', status: '진행중' },
-    { id: 3, product: '더블 모이스처 크림 50ml', type: 'pack', subCategories: [], vendor: '', title: '본품 충진 및 세트 포장', start: '2026-11-24', end: '2026-11-26', note: '10000 세트', status: '예정' },
-    { id: 4, product: '프리미엄 마스크팩 세트', type: 'sub', subCategories: ['원단'], vendor: '대한텍스타일', title: '부직포 원단 입고 (선행)', start: '2026-11-14', end: '2026-11-15', note: '20000 매', status: '예정' },
-    { id: 5, product: '프리미엄 마스크팩 세트', type: 'semi', subCategories: [], vendor: '', title: '마스크팩 에센스 반제품 입고', start: '2026-11-18', end: '2026-11-18', note: '300 kg', status: '예정' },
+    { id: 1, product: '더블 모이스처 크림 50ml', type: 'semi', subCategories: [], subQuantities: {}, vendor: '', title: '크림 벌크 반제품 입고 (선행)', start: '2026-11-15', end: '2026-11-15', note: '500 kg', status: '완료' },
+    { id: 2, product: '더블 모이스처 크림 50ml', type: 'sub', subCategories: ['케이스', '카드'], subQuantities: { '케이스': '10000 EA', '카드': '10000 장' }, vendor: '대성인쇄(주)', title: '단상자 케이스 및 설명카드 입고', start: '2026-11-16', end: '2026-11-17', note: '', status: '진행중' },
+    { id: 3, product: '더블 모이스처 크림 50ml', type: 'pack', subCategories: [], subQuantities: {}, vendor: '', title: '본품 충진 및 세트 포장', start: '2026-11-24', end: '2026-11-26', note: '10000 세트', status: '예정' },
+    { id: 4, product: '프리미엄 마스크팩 세트', type: 'sub', subCategories: ['원단'], subQuantities: { '원단': '20000 매' }, vendor: '대한텍스타일', title: '부직포 원단 입고 (선행)', start: '2026-11-14', end: '2026-11-15', note: '', status: '예정' },
+    { id: 5, product: '프리미엄 마스크팩 세트', type: 'semi', subCategories: [], subQuantities: {}, vendor: '', title: '마스크팩 에센스 반제품 입고', start: '2026-11-18', end: '2026-11-18', note: '300 kg', status: '예정' },
     { id: 6, product: '프리미엄 마스크팩 세트', type: 'pack', subCategories: [], vendor: '', title: '에센스 함침 및 파우치 포장', start: '2026-11-25', end: '2026-11-27', note: '20000 파우치', status: '예정' }
   ];
 
   let schedules = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultSchedules;
-  // 실사 수량 데이터 저장소 (id별 실제 입력값)
   let actualStockData = JSON.parse(localStorage.getItem(STOCK_STORAGE_KEY)) || {};
 
   let currentFilter = 'all';
@@ -407,7 +416,11 @@
 
   function renderSubCatBadges(item) {
     const cats = getItemSubCats(item);
-    return cats.map(c => `<span class="subcat-badge subcat-${c}">${c}</span>`).join('');
+    const subQtys = item.subQuantities || {};
+    return cats.map(c => {
+      const qText = subQtys[c] ? ` (${subQtys[c]})` : '';
+      return `<span class="subcat-badge subcat-${c}">${c}${qText}</span>`;
+    }).join('');
   }
 
   function saveAll() {
@@ -433,6 +446,42 @@
     });
   }
 
+  function onSubCatChange() {
+    syncPillStyles();
+    renderSubQuantitiesInputs();
+  }
+
+  function renderSubQuantitiesInputs(existingValues = {}) {
+    const type = document.getElementById('type').value;
+    const container = document.getElementById('subQuantitiesContainer');
+    const listDiv = document.getElementById('subQtyInputsList');
+    listDiv.innerHTML = '';
+
+    if (type !== 'sub') {
+      container.classList.remove('active');
+      return;
+    }
+
+    const checkedCats = Array.from(document.querySelectorAll('input[name="subCat"]:checked')).map(cb => cb.value);
+
+    if (checkedCats.length === 0) {
+      container.classList.remove('active');
+      return;
+    }
+
+    container.classList.add('active');
+    checkedCats.forEach(cat => {
+      const val = existingValues[cat] || '';
+      const div = document.createElement('div');
+      div.className = 'sub-qty-item';
+      div.innerHTML = `
+        <label>📌 ${cat} 수량</label>
+        <input type="text" class="sub-qty-field" data-cat="${cat}" placeholder="예: 10,000 EA" value="${val}">
+      `;
+      listDiv.appendChild(div);
+    });
+  }
+
   function toggleSubInputs() {
     const type = document.getElementById('type').value;
     const subCatGroup = document.getElementById('subCategory-group');
@@ -442,9 +491,11 @@
       subCatGroup.classList.add('disabled');
       vendorInput.value = '';
       vendorInput.disabled = true;
+      document.getElementById('subQuantitiesContainer').classList.remove('active');
     } else {
       subCatGroup.classList.remove('disabled');
       vendorInput.disabled = false;
+      renderSubQuantitiesInputs();
     }
   }
 
@@ -492,7 +543,6 @@
     renderAll();
   }
 
-  // 수량 파싱 헬퍼
   function parseQtyAndUnit(noteStr) {
     if (!noteStr) return { qty: 0, unit: '' };
     const match = noteStr.match(/([\d,]+(?:\.\d+)?)\s*([가-힣a-zA-Z%]*)/);
@@ -503,6 +553,14 @@
       };
     }
     return { qty: 0, unit: '' };
+  }
+
+  // 아이템의 총 수량 및 비고 표시용 텍스트 생성 헬퍼
+  function getItemQuantityDisplay(item) {
+    if (item.type === 'sub' && item.subQuantities && Object.keys(item.subQuantities).length > 0) {
+      return Object.entries(item.subQuantities).map(([cat, qty]) => `${cat}: ${qty}`).join(' / ');
+    }
+    return item.note || '-';
   }
 
   // 1. 달력 뷰
@@ -551,7 +609,8 @@
         const cats = getItemSubCats(ev);
         const subText = cats.length ? `[${cats.join('·')}] ` : '';
         const vendorText = ev.vendor ? `(${ev.vendor}) ` : '';
-        evDiv.title = `[${ev.product}] ${subText}${vendorText}${ev.title} (${ev.note || ''})`;
+        const qtyText = getItemQuantityDisplay(ev);
+        evDiv.title = `[${ev.product}] ${subText}${vendorText}${ev.title} (${qtyText})`;
         evDiv.innerHTML = `<strong>${ev.product}</strong><br>${subText}${vendorText}${ev.title}`;
         evDiv.onclick = (e) => { e.stopPropagation(); loadScheduleForEdit(ev.id); };
         cellDiv.appendChild(evDiv);
@@ -636,6 +695,7 @@
           conf.items.forEach(item => {
             const subCatHtml = renderSubCatBadges(item);
             const vendorHtml = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '';
+            const qtyDisplay = getItemQuantityDisplay(item);
             
             stageContent += `
               <div class="stage-item ${item.type} ${item.status === '완료' ? 'done' : ''}" onclick="loadScheduleForEdit(${item.id})">
@@ -643,7 +703,7 @@
                 <div class="s-title">${item.title}</div>
                 ${vendorHtml ? `<div class="s-meta">${vendorHtml}</div>` : ''}
                 <div class="s-date">📅 ${item.start} ~ ${item.end}</div>
-                ${item.note ? `<div class="s-note">📝 ${item.note}</div>` : ''}
+                <div class="s-note">📝 ${qtyDisplay}</div>
                 <div class="s-status">${item.status}</div>
               </div>
             `;
@@ -714,12 +774,14 @@
                   stage.items.forEach(item => {
                       const subCatHtml = renderSubCatBadges(item);
                       const vendorStr = item.vendor ? `<div style="margin-top:3px;"><span class="vendor-badge">🏢 ${item.vendor}</span></div>` : '';
+                      const qtyDisplay = getItemQuantityDisplay(item);
                       boxHtml += `
                           <div class="diag-item-card">
                               ${subCatHtml ? `<div>${subCatHtml}</div>` : ''}
                               <div class="diag-title">${item.title}</div>
                               ${vendorStr}
                               <div class="diag-date">📅 ${item.start} ~ ${item.end}</div>
+                              <div class="diag-date" style="font-weight:700; color:#111;">📝 ${qtyDisplay}</div>
                           </div>
                       `;
                   });
@@ -757,6 +819,7 @@
       const subCatBadges = renderSubCatBadges(item);
       const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
       const checkLabel = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
+      const qtyDisplay = getItemQuantityDisplay(item);
       
       const tr = document.createElement('tr');
       if (isDone) tr.classList.add('row-done');
@@ -773,7 +836,7 @@
         <td>${vendorDisplay}</td>
         <td class="title-cell" style="font-weight:600;">${item.title}</td>
         <td style="color:var(--text-sub); font-weight:600;">${item.start} ~ ${item.end}</td>
-        <td>${item.note || '-'}</td>
+        <td style="font-weight:600;">${qtyDisplay}</td>
         <td>
           <select onchange="updateStatusInline(${item.id}, this.value)" style="padding:3px 6px; font-size:11px; border-radius:4px; height:auto;">
             <option value="예정" ${item.status === '예정' ? 'selected' : ''}>예정</option>
@@ -790,7 +853,7 @@
     });
   }
 
-  // 5. 재고 조사 뷰
+  // 5. 재고 조사 뷰 (다중 부자재별 수량을 각각 행으로 분리하여 정확한 실사 대조 수행)
   function renderStockView() {
     const tbody = document.getElementById('stock-content');
     tbody.innerHTML = '';
@@ -800,45 +863,90 @@
     sortedSchedules.forEach(item => {
       if (!matchFilter(item)) return;
 
-      const planParsed = parseQtyAndUnit(item.note);
-      const planQty = planParsed.qty;
-      const unit = planParsed.unit;
+      const subCats = getItemSubCats(item);
+      const subQtys = item.subQuantities || {};
 
-      const actualQty = actualStockData[item.id] !== undefined ? actualStockData[item.id] : planQty;
-      const diff = actualQty - planQty;
+      // 부자재이면서 다중 수량이 입력된 경우 각각 분리하여 행 생성
+      if (item.type === 'sub' && subCats.length > 0 && Object.keys(subQtys).length > 0) {
+        subCats.forEach(cat => {
+          const rawNote = subQtys[cat] || '';
+          if (!rawNote) return;
 
-      let statusBadge = '<span class="diff-badge diff-match">✓ 일치 (정상)</span>';
-      if (diff < 0) {
-        statusBadge = `<span class="diff-badge diff-short">⚠️ 부족 (${diff.toLocaleString()} ${unit})</span>`;
-      } else if (diff > 0) {
-        statusBadge = `<span class="diff-badge diff-over">📈 초과 (+${diff.toLocaleString()} ${unit})</span>`;
+          const planParsed = parseQtyAndUnit(rawNote);
+          const planQty = planParsed.qty;
+          const unit = planParsed.unit;
+
+          const stockKey = `${item.id}_${cat}`;
+          const actualQty = actualStockData[stockKey] !== undefined ? actualStockData[stockKey] : planQty;
+          const diff = actualQty - planQty;
+
+          let statusBadge = '<span class="diff-badge diff-match">✓ 일치 (정상)</span>';
+          if (diff < 0) {
+            statusBadge = `<span class="diff-badge diff-short">⚠️ 부족 (${diff.toLocaleString()} ${unit})</span>`;
+          } else if (diff > 0) {
+            statusBadge = `<span class="diff-badge diff-over">📈 초과 (+${diff.toLocaleString()} ${unit})</span>`;
+          }
+
+          const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-weight:800;">${item.product}</td>
+            <td><span class="badge sub">부자재</span><br><span class="subcat-badge subcat-${cat}">${cat}</span></td>
+            <td style="font-weight:600;">${item.title} (${cat})</td>
+            <td>${vendorDisplay}</td>
+            <td style="text-align:right; font-weight:700;">${planQty.toLocaleString()} ${unit}</td>
+            <td style="text-align:right;">
+              <input type="number" class="actual-qty-input" value="${actualQty}" onchange="updateActualStock('${stockKey}', this.value)"> ${unit}
+            </td>
+            <td style="text-align:right; font-weight:700;">${diff > 0 ? '+' : ''}${diff.toLocaleString()} ${unit}</td>
+            <td style="text-align:center;">${statusBadge}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        // 단일 수량 항목 (반제품, 포장, 또는 일반 비고 수량)
+        const planParsed = parseQtyAndUnit(item.note);
+        const planQty = planParsed.qty;
+        const unit = planParsed.unit;
+
+        const stockKey = `${item.id}_single`;
+        const actualQty = actualStockData[stockKey] !== undefined ? actualStockData[stockKey] : planQty;
+        const diff = actualQty - planQty;
+
+        let statusBadge = '<span class="diff-badge diff-match">✓ 일치 (정상)</span>';
+        if (diff < 0) {
+          statusBadge = `<span class="diff-badge diff-short">⚠️ 부족 (${diff.toLocaleString()} ${unit})</span>`;
+        } else if (diff > 0) {
+          statusBadge = `<span class="diff-badge diff-over">📈 초과 (+${diff.toLocaleString()} ${unit})</span>`;
+        }
+
+        const subCatBadges = renderSubCatBadges(item);
+        const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:800;">${item.product}</td>
+          <td><span class="badge ${item.type}">${typeInfoMap[item.type]}</span><br>${subCatBadges}</td>
+          <td style="font-weight:600;">${item.title}</td>
+          <td>${vendorDisplay}</td>
+          <td style="text-align:right; font-weight:700;">${planQty.toLocaleString()} ${unit}</td>
+          <td style="text-align:right;">
+            <input type="number" class="actual-qty-input" value="${actualQty}" onchange="updateActualStock('${stockKey}', this.value)"> ${unit}
+          </td>
+          <td style="text-align:right; font-weight:700;">${diff > 0 ? '+' : ''}${diff.toLocaleString()} ${unit}</td>
+          <td style="text-align:center;">${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
       }
-
-      const subCatBadges = renderSubCatBadges(item);
-      const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-weight:800;">${item.product}</td>
-        <td><span class="badge ${item.type}">${typeInfoMap[item.type]}</span><br>${subCatBadges}</td>
-        <td style="font-weight:600;">${item.title}</td>
-        <td>${vendorDisplay}</td>
-        <td style="text-align:right; font-weight:700;">${planQty.toLocaleString()} ${unit}</td>
-        <td style="text-align:right;">
-          <input type="number" class="actual-qty-input" value="${actualQty}" onchange="updateActualStock(${item.id}, this.value)"> ${unit}
-        </td>
-        <td style="text-align:right; font-weight:700;">${diff > 0 ? '+' : ''}${diff.toLocaleString()} ${unit}</td>
-        <td style="text-align:center;">${statusBadge}</td>
-      `;
-      tbody.appendChild(tr);
     });
   }
 
-  function updateActualStock(id, val) {
+  function updateActualStock(stockKey, val) {
     const num = parseFloat(val);
-    actualStockData[id] = isNaN(num) ? 0 : num;
+    actualStockData[stockKey] = isNaN(num) ? 0 : num;
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(actualStockData));
-    renderStockView(); // 즉시 차이 및 상태 갱신
+    renderStockView();
   }
 
   const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
@@ -871,7 +979,7 @@
       if (type === 'sub') {
           const checkedCats = document.querySelectorAll('input[name="subCat"]:checked');
           if (checkedCats.length === 0) {
-              alert('부자재 종류(케이스, 카드, 트레이, 원단, 성형물)를 최소 1개 이상 선택해주세요.');
+              alert('부자재 종류(케이스, 카드, 트레이 등)를 최소 1개 이상 선택해주세요.');
               return false;
           }
       }
@@ -888,16 +996,32 @@
       ? Array.from(document.querySelectorAll('input[name="subCat"]:checked')).map(cb => cb.value)
       : [];
 
+    const subQuantities = {};
+    if (type === 'sub') {
+      document.querySelectorAll('.sub-qty-field').forEach(input => {
+        const cat = input.dataset.cat;
+        const val = input.value.trim();
+        if (val) subQuantities[cat] = val;
+      });
+    }
+
     return {
       product: document.getElementById('product').value.trim(),
       type: type,
       subCategories: selectedCats,
+      subQuantities: subQuantities,
       vendor: type === 'sub' ? document.getElementById('vendor').value.trim() : '',
       title: document.getElementById('title').value.trim(),
       start: document.getElementById('startDate').value,
       end: document.getElementById('endDate').value,
-      note: document.getElementById('note').value.trim(),
+      note: type !== 'sub' ? promptForNoteIfPackOrSemi() : ''
     };
+  }
+
+  function promptForNoteIfPackOrSemi() {
+    // 포장이나 반제품의 경우 기존 note 입력필드가 없으므로 수량을 프롬프트 대신 간단히 처리하거나 기본값 부여 가능
+    // 여기서는 폼 하단 통합 관리를 위해 기존 note 칸을 활용하도록 하거나 기본값을 반환합니다.
+    return ''; 
   }
 
   function setFormData(data) {
@@ -910,12 +1034,15 @@
       cb.checked = (data.type === 'sub' && cats.includes(cb.value));
     });
     syncPillStyles();
+    
+    if (data.type === 'sub') {
+      renderSubQuantitiesInputs(data.subQuantities || {});
+    }
 
     document.getElementById('vendor').value = data.vendor || '';
     document.getElementById('title').value = data.title;
     document.getElementById('startDate').value = data.start;
     document.getElementById('endDate').value = data.end;
-    document.getElementById('note').value = data.note;
   }
 
   function resetForm() {
@@ -934,7 +1061,6 @@
 
     document.getElementById('vendor').value = '';
     document.getElementById('title').value = '';
-    document.getElementById('note').value = '';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
     document.getElementById('endDate').value = today;
@@ -943,180 +1069,3 @@
 
   function addSchedule() {
     const newItem = getFormData();
-    newItem.id = Date.now();
-    newItem.status = '예정';
-    schedules.push(newItem);
-    resetForm();
-    saveAll();
-  }
-
-  function loadScheduleForEdit(id) {
-    const item = schedules.find(s => s.id === id);
-    if (!item) return;
-
-    isEditMode = true;
-    document.getElementById('edit-id').value = item.id;
-    setFormData(item);
-    
-    document.getElementById('main-form-card').classList.add('edit-mode');
-    document.getElementById('submit-btn').innerText = '💾 일정 수정 저장';
-    document.getElementById('submit-btn').classList.add('edit-mode-btn');
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEdit() {
-    resetForm();
-  }
-
-  function updateSchedule() {
-    const id = parseInt(document.getElementById('edit-id').value);
-    const index = schedules.findIndex(s => s.id === id);
-    if (index === -1) return;
-
-    const updatedData = getFormData();
-    schedules[index] = { id, ...updatedData, status: schedules[index].status };
-
-    resetForm();
-    saveAll();
-  }
-
-  function updateStatusInline(id, newStatus) {
-    const item = schedules.find(s => s.id === id);
-    if(item) {
-      item.status = newStatus;
-      saveAll();
-    }
-  }
-
-  function deleteSchedule(id) {
-    if(confirm('정말로 이 일정을 삭제하시겠습니까?')) {
-      schedules = schedules.filter(s => s.id !== id);
-      delete actualStockData[id];
-      resetForm();
-      saveAll();
-    }
-  }
-
-  // 엑셀 내보내기 (현재 탭이 재고 조사면 재고 조사표, 아니면 전체 일정표 다운로드)
-  function exportToExcelCSV() {
-    if (currentView === 'stock') {
-      exportStockToCSV();
-      return;
-    }
-
-    const targetData = [...schedules]
-      .filter(item => matchFilter(item))
-      .sort((a, b) => new Date(a.start) - new Date(b.start));
-
-    if (targetData.length === 0) {
-      alert('내보낼 일정 데이터가 없습니다.');
-      return;
-    }
-
-    const headers = ['입고/완료여부', '제품명', '구분', '부자재종류', '협력사', '세부품목/작업명', '시작일', '종료일', '수량(숫자)', '단위', '원본비고', '진행상태'];
-    
-    const escapeCSV = (val) => {
-      const str = String(val ?? '');
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
-
-    const rows = targetData.map(item => {
-      const isDone = item.status === '완료';
-      const checkText = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
-      const subCats = getItemSubCats(item).join(' / ');
-      const { qty, unit } = parseQtyAndUnit(item.note);
-
-      return [
-        checkText,
-        item.product,
-        typeInfoMap[item.type] || item.type,
-        subCats,
-        item.vendor || '',
-        item.title,
-        item.start,
-        item.end,
-        qty,
-        unit,
-        item.note || '',
-        item.status
-      ].map(escapeCSV).join(',');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-    downloadCSV(csvContent, '생산입고_수량일정표');
-  }
-
-  function exportStockToCSV() {
-    const targetData = [...schedules]
-      .filter(item => matchFilter(item))
-      .sort((a, b) => new Date(a.start) - new Date(b.start));
-
-    if (targetData.length === 0) {
-      alert('내보낼 재고 조사 데이터가 없습니다.');
-      return;
-    }
-
-    const headers = ['제품명', '구분', '부자재종류', '협력사', '세부품목/작업명', '계획수량', '실사수량', '오차(차이)', '단위', '상태판정'];
-
-    const escapeCSV = (val) => {
-      const str = String(val ?? '');
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
-
-    const rows = targetData.map(item => {
-      const planParsed = parseQtyAndUnit(item.note);
-      const planQty = planParsed.qty;
-      const unit = planParsed.unit;
-      const actualQty = actualStockData[item.id] !== undefined ? actualStockData[item.id] : planQty;
-      const diff = actualQty - planQty;
-
-      let statusText = '일치(정상)';
-      if (diff < 0) statusText = `부족(${diff})`;
-      else if (diff > 0) statusText = `초과(+${diff})`;
-
-      const subCats = getItemSubCats(item).join(' / ');
-
-      return [
-        item.product,
-        typeInfoMap[item.type] || item.type,
-        subCats,
-        item.vendor || '',
-        item.title,
-        planQty,
-        actualQty,
-        diff,
-        unit,
-        statusText
-      ].map(escapeCSV).join(',');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-    downloadCSV(csvContent, '재고조사_실사대조표');
-  }
-
-  function downloadCSV(csvContent, baseName) {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const todayStr = new Date().toISOString().split('T')[0];
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${baseName}_${todayStr}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  resetForm();
-  renderAll();
-</script>
-
-</body>
-</html>
