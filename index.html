@@ -35,6 +35,25 @@
     .legend-item { display: flex; align-items: center; gap: 5px; }
     .dot { width: 9px; height: 9px; border-radius: 50%; }
 
+    /* 로그인 화면 */
+    #login-overlay { position: fixed; inset: 0; background: var(--bg-color); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .login-card { background: #fff; border: 1px solid var(--border-color); border-radius: 14px; padding: 32px 28px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .login-card h2 { font-size: 20px; font-weight: 800; }
+    .login-card p { font-size: 13px; color: var(--text-sub); }
+    .login-card input { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; width: 100%; height: 42px; }
+    .login-card input:focus { outline: 2px solid var(--color-accent); border-color: transparent; }
+    #login-btn { background: #111827; color: #fff; border: none; border-radius: 6px; height: 42px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    #login-btn:hover { background: #374151; }
+    #login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    #login-error { color: #dc2626; font-size: 12px; min-height: 16px; line-height: 1.5; }
+
+    /* 로그인 사용자 표시 */
+    .user-box { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); background: #fff; border: 1px solid var(--border-color); padding: 5px 12px; border-radius: 20px; }
+    .user-box button { background: none; border: none; color: var(--text-main); font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: underline; }
+    .sync-status { font-size: 11px; font-weight: 600; color: var(--text-sub); }
+    .migrate-btn { display: none; background: #fff; border: 1px solid #f59e0b; color: #b45309; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; align-items: center; gap: 5px; }
+    .migrate-btn:hover { background: #fffbeb; }
+
     /* 입력 폼 영역 */
     .form-card { background: var(--card-bg); padding: 18px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; transition: all 0.3s; }
     .form-card.edit-mode { border-color: var(--color-accent); background-color: #fdfdff; box-shadow: 0 0 10px rgba(79, 70, 229, 0.15); }
@@ -59,6 +78,7 @@
     .chk-pill.checked { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
 
     button.action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; height: 35px; font-size: 13px; white-space: nowrap; }
+    button.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     button#submit-btn { background: #111827; color: #fff; }
     button#submit-btn:hover { background: #374151; }
     button#submit-btn.edit-mode-btn { background: var(--color-accent); }
@@ -73,7 +93,6 @@
     .filter-btn { background: #fff; color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; }
     .filter-btn.active { background: #111827; color: #fff; border-color: #111827; }
     .filter-divider { width: 1px; height: 14px; background: #d1d5db; margin: 0 2px; }
-    .reset-btn { background: transparent; border: none; color: var(--text-sub); font-size: 11px; text-decoration: underline; cursor: pointer; margin-left: 6px; }
 
     /* 엑셀 다운로드 버튼 */
     .excel-btn { background: #15803d; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.15s; }
@@ -162,6 +181,7 @@
     .row-actions { display: flex; gap: 6px; }
     .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; opacity: 0.75; font-size: 14px; }
     .icon-btn:hover { opacity: 1; }
+    .last-edit { font-size: 11px; color: var(--text-sub); line-height: 1.4; white-space: nowrap; }
 
     /* 4. 다이어그램 뷰 */
     .diagram-container { display: flex; flex-direction: column; gap: 24px; }
@@ -201,7 +221,19 @@
 </head>
 <body>
 
-<div class="container">
+<!-- 로그인 화면 -->
+<div id="login-overlay">
+  <div class="login-card">
+    <h2>🏭 생산·입고 일정 관리</h2>
+    <p>관리자에게 받은 계정으로 로그인해주세요.</p>
+    <input type="email" id="login-email" placeholder="이메일" autocomplete="username">
+    <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password">
+    <button type="button" id="login-btn">로그인</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<div class="container" id="app" style="display:none;">
   <header>
     <h1>🏭 생산·입고 통합 일정 관리</h1>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -211,6 +243,12 @@
         <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장</div>
       </div>
       <button type="button" class="excel-btn" onclick="exportToExcelCSV()">📊 수량·일정 엑셀 다운로드</button>
+      <button type="button" class="migrate-btn" id="migrate-btn" onclick="migrateLocalData()">📥 이 브라우저의 기존 데이터 올리기</button>
+      <div class="user-box">
+        <span class="sync-status" id="sync-status">연결 중...</span>
+        <span id="user-email"></span>
+        <button type="button" onclick="doLogout()">로그아웃</button>
+      </div>
     </div>
   </header>
 
@@ -290,7 +328,6 @@
       <span class="filter-divider"></span>
       <button class="filter-btn" onclick="setFilter('semi', this)">반제품</button>
       <button class="filter-btn" onclick="setFilter('pack', this)">포장</button>
-      <button class="reset-btn" onclick="resetData()">샘플 초기화</button>
     </div>
   </div>
 
@@ -330,6 +367,7 @@
           <th>일정 기간</th>
           <th>수량 / 비고</th>
           <th>상태</th>
+          <th>최종 수정</th>
           <th>관리</th>
         </tr>
       </thead>
@@ -338,23 +376,65 @@
   </div>
 </div>
 
-<script>
-  const STORAGE_KEY = 'production_scheduler_data_v7';
-  
-  const defaultSchedules = [
-    { id: 1, product: '더블 모이스처 크림 50ml', type: 'semi', subCategories: [], vendor: '', title: '크림 벌크 반제품 입고 (선행)', start: '2026-11-15', end: '2026-11-15', note: '500 kg', status: '완료' },
-    { id: 2, product: '더블 모이스처 크림 50ml', type: 'sub', subCategories: ['케이스', '카드'], vendor: '대성인쇄(주)', title: '단상자 케이스 및 설명카드 입고', start: '2026-11-16', end: '2026-11-17', note: '10,000 SET', status: '진행중' },
-    { id: 3, product: '더블 모이스처 크림 50ml', type: 'pack', subCategories: [], vendor: '', title: '본품 충진 및 세트 포장', start: '2026-11-24', end: '2026-11-26', note: '1라인 가동', status: '예정' },
-    { id: 4, product: '프리미엄 마스크팩 세트', type: 'sub', subCategories: ['원단'], vendor: '대한텍스타일', title: '부직포 원단 입고 (선행)', start: '2026-11-14', end: '2026-11-15', note: '20,000 매', status: '예정' },
-    { id: 5, product: '프리미엄 마스크팩 세트', type: 'semi', subCategories: [], vendor: '', title: '마스크팩 에센스 반제품 입고', start: '2026-11-18', end: '2026-11-18', note: '300 kg', status: '예정' },
-    { id: 6, product: '프리미엄 마스크팩 세트', type: 'pack', subCategories: [], vendor: '', title: '에센스 함침 및 파우치 포장', start: '2026-11-25', end: '2026-11-27', note: '3라인 가동', status: '예정' }
-  ];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  let schedules = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultSchedules;
+  // ============================================================
+  // ★ Firebase 설정값: Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 에서 복사해 아래를 교체하세요.
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPqQkj3WeyNA11CXsg7BCYZbLDS-bSuR0",
+    authDomain: "tomo-2f263.firebaseapp.com",
+    projectId: "tomo-2f263",
+    storageBucket: "tomo-2f263.firebasestorage.app",
+    messagingSenderId: "1071652169652",
+    appId: "1:1071652169652:web:d42e1333731fbd5d0ab4e1"
+  };
+
+  const COLLECTION = 'schedules';
+  const OLD_STORAGE_KEY = 'production_scheduler_data_v7'; // 이전 버전(브라우저 저장) 데이터 키
+
+  const configured = !String(firebaseConfig.apiKey).startsWith('YOUR_');
+  let auth = null, db = null;
+  if (configured) {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }
+
+  let schedules = [];
+  let currentUser = null;
+  let unsubscribe = null;
   let currentFilter = 'all';
   let currentView = 'calendar';
-  let calDate = new Date(2026, 10, 16);
+  let calDate = new Date();
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth(), 1);
   let isEditMode = false;
+
+  const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
+
+  /* ---------------- 공통 유틸 ---------------- */
+  function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function shortName(email) {
+    return email ? String(email).split('@')[0] : '';
+  }
+
+  function fmtStamp(ts) {
+    if (!ts || typeof ts.toDate !== 'function') return '';
+    const d = ts.toDate();
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
 
   function getItemSubCats(item) {
     if (Array.isArray(item.subCategories)) return item.subCategories;
@@ -364,21 +444,219 @@
 
   function renderSubCatBadges(item) {
     const cats = getItemSubCats(item);
-    return cats.map(c => `<span class="subcat-badge subcat-${c}">${c}</span>`).join('');
+    return cats.map(c => `<span class="subcat-badge subcat-${esc(c)}">${esc(c)}</span>`).join('');
   }
 
-  function saveAll() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
-    renderAll();
+  function setSync(text) {
+    document.getElementById('sync-status').innerText = text;
   }
 
-  function resetData() {
-    if(confirm('모든 데이터를 초기 샘플 데이터로 되돌리시겠습니까?')) {
-      schedules = [...defaultSchedules];
-      saveAll();
+  /* ---------------- 로그인 / 로그아웃 ---------------- */
+  function authErrorMessage(code) {
+    switch (code) {
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return '이메일 또는 비밀번호가 올바르지 않습니다.';
+      case 'auth/invalid-email':
+        return '이메일 형식이 올바르지 않습니다.';
+      case 'auth/too-many-requests':
+        return '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+      case 'auth/network-request-failed':
+        return '인터넷 연결을 확인해주세요.';
+      case 'auth/user-disabled':
+        return '사용이 중지된 계정입니다. 관리자에게 문의해주세요.';
+      default:
+        return '로그인에 실패했습니다. (' + (code || '알 수 없는 오류') + ')';
     }
   }
 
+  async function doLogin() {
+    const errBox = document.getElementById('login-error');
+    const email = document.getElementById('login-email').value.trim();
+    const pw = document.getElementById('login-pw').value;
+    errBox.innerText = '';
+    if (!configured) return;
+    if (!email || !pw) { errBox.innerText = '이메일과 비밀번호를 입력해주세요.'; return; }
+
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pw);
+      document.getElementById('login-pw').value = '';
+    } catch (e) {
+      errBox.innerText = authErrorMessage(e.code);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function doLogout() {
+    if (auth) signOut(auth);
+  }
+
+  function startListening() {
+    stopListening();
+    setSync('연결 중...');
+    unsubscribe = onSnapshot(collection(db, COLLECTION), (snap) => {
+      schedules = snap.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+      setSync('🟢 실시간 동기화 중');
+      renderAll();
+    }, (err) => {
+      console.error(err);
+      setSync('🔴 연결 오류');
+      if (err && err.code === 'permission-denied') {
+        alert('데이터를 볼 권한이 없습니다. 관리자에게 계정 권한을 확인해달라고 요청해주세요.');
+      } else {
+        alert('데이터를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
+      }
+    });
+  }
+
+  function stopListening() {
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  if (configured) {
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('user-email').innerText = user.email || '';
+        checkLocalData();
+        startListening();
+      } else {
+        stopListening();
+        schedules = [];
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('login-overlay').style.display = 'flex';
+      }
+    });
+  } else {
+    document.getElementById('login-error').innerText = 'Firebase 설정값(firebaseConfig)이 아직 입력되지 않았습니다. index.html 안의 firebaseConfig를 본인 프로젝트 값으로 교체해주세요.';
+    document.getElementById('login-btn').disabled = true;
+  }
+
+  /* ---------------- 데이터 쓰기 (Firestore) ---------------- */
+  function stamp() {
+    return { updatedBy: currentUser ? (currentUser.email || '') : '', updatedAt: serverTimestamp() };
+  }
+
+  function handleWriteError(e) {
+    console.error(e);
+    if (e && e.code === 'permission-denied') {
+      alert('저장 권한이 없습니다. 로그아웃 후 다시 로그인하거나 관리자에게 문의해주세요.');
+    } else if (e && e.code === 'not-found') {
+      alert('다른 사람이 이미 삭제한 일정입니다.');
+      resetForm();
+    } else {
+      alert('저장에 실패했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
+    }
+  }
+
+  async function patchSchedule(id, fields) {
+    try {
+      await updateDoc(doc(db, COLLECTION, id), { ...fields, ...stamp() });
+    } catch (e) {
+      handleWriteError(e);
+    }
+  }
+
+  async function addSchedule() {
+    const newItem = { ...getFormData(), status: '예정', ...stamp() };
+    try {
+      await addDoc(collection(db, COLLECTION), newItem);
+      resetForm();
+    } catch (e) {
+      handleWriteError(e);
+    }
+  }
+
+  async function updateSchedule() {
+    const id = document.getElementById('edit-id').value;
+    if (!id) return;
+    try {
+      await updateDoc(doc(db, COLLECTION, id), { ...getFormData(), ...stamp() });
+      resetForm();
+    } catch (e) {
+      handleWriteError(e);
+    }
+  }
+
+  function toggleReceiveStatus(id, isChecked) {
+    patchSchedule(id, { status: isChecked ? '완료' : '예정' });
+  }
+
+  function updateStatusInline(id, newStatus) {
+    patchSchedule(id, { status: newStatus });
+  }
+
+  async function deleteSchedule(id) {
+    if (!confirm('정말로 이 일정을 삭제하시겠습니까?\n(함께 쓰는 모든 사람의 화면에서 삭제됩니다)')) return;
+    try {
+      await deleteDoc(doc(db, COLLECTION, id));
+      if (document.getElementById('edit-id').value === id) resetForm();
+    } catch (e) {
+      handleWriteError(e);
+    }
+  }
+
+  /* ---------------- 기존(브라우저 저장) 데이터 올리기 ---------------- */
+  function getLocalData() {
+    try {
+      const raw = localStorage.getItem(OLD_STORAGE_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function checkLocalData() {
+    document.getElementById('migrate-btn').style.display = getLocalData().length ? 'inline-flex' : 'none';
+  }
+
+  async function migrateLocalData() {
+    const local = getLocalData();
+    if (!local.length) { checkLocalData(); return; }
+    if (!confirm(`이 브라우저에 저장된 일정 ${local.length}건을 공유 데이터로 올립니다.\n(예전 샘플 데이터가 섞여 있을 수 있으니 올린 뒤 확인해주세요)\n\n한 번만 실행해주세요. 계속할까요?`)) return;
+
+    try {
+      for (let i = 0; i < local.length; i += 400) {
+        const batch = writeBatch(db);
+        local.slice(i, i + 400).forEach(item => {
+          batch.set(doc(collection(db, COLLECTION)), {
+            product: item.product || '',
+            type: item.type || 'sub',
+            subCategories: getItemSubCats(item),
+            vendor: item.vendor || '',
+            title: item.title || '',
+            start: item.start || '',
+            end: item.end || '',
+            note: item.note || '',
+            status: item.status || '예정',
+            ...stamp()
+          });
+        });
+        await batch.commit();
+      }
+      // 중복 업로드 방지: 원본은 백업 키로 옮기고 기존 키는 삭제
+      localStorage.setItem(OLD_STORAGE_KEY + '_uploaded_backup', JSON.stringify(local));
+      localStorage.removeItem(OLD_STORAGE_KEY);
+      checkLocalData();
+      alert(`${local.length}건을 올렸습니다.`);
+    } catch (e) {
+      handleWriteError(e);
+    }
+  }
+
+  /* ---------------- 폼 ---------------- */
   function syncPillStyles() {
     document.querySelectorAll('#subCategory-group .chk-pill').forEach(label => {
       const cb = label.querySelector('input[type="checkbox"]');
@@ -423,11 +701,11 @@
   function updateDatalists() {
     const prodList = document.getElementById('product-list');
     const products = [...new Set(schedules.map(s => s.product))].sort();
-    prodList.innerHTML = products.map(p => `<option value="${p}">`).join('');
+    prodList.innerHTML = products.map(p => `<option value="${esc(p)}">`).join('');
 
     const vendorList = document.getElementById('vendor-list');
     const vendors = [...new Set(schedules.map(s => s.vendor).filter(Boolean))].sort();
-    vendorList.innerHTML = vendors.map(v => `<option value="${v}">`).join('');
+    vendorList.innerHTML = vendors.map(v => `<option value="${esc(v)}">`).join('');
   }
 
   function switchView(viewName, btnElement) {
@@ -445,7 +723,8 @@
     renderAll();
   }
 
-  // 비고란에서 수량(숫자)과 단위 분리 파싱 및 엑셀(CSV) 내보내기
+  /* ---------------- 엑셀(CSV) 내보내기 ---------------- */
+  // 비고란에서 수량(숫자)과 단위 분리 파싱
   function parseQtyAndUnit(noteStr) {
     if (!noteStr) return { qty: '', unit: '' };
     const match = noteStr.match(/([\d,]+(?:\.\d+)?)\s*([가-힣a-zA-Z%]*)/);
@@ -504,17 +783,16 @@
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
-    const todayStr = new Date().toISOString().split('T')[0];
     const link = document.createElement('a');
     link.href = url;
-    link.download = `생산입고_수량일정표_${todayStr}.csv`;
+    link.download = `생산입고_수량일정표_${getTodayStr()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
 
-  // 1. 달력 뷰
+  /* ---------------- 1. 달력 뷰 ---------------- */
   function renderCalendar() {
     const year = calDate.getFullYear();
     const month = calDate.getMonth();
@@ -534,7 +812,7 @@
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
     const lastDateOfPrevMonth = new Date(year, month, 0).getDate();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayStr();
 
     for (let i = 0; i < firstDayOfMonth; i++) {
       calContent.appendChild(createEmptyCell(lastDateOfPrevMonth - firstDayOfMonth + i + 1, true));
@@ -561,7 +839,7 @@
         const subText = cats.length ? `[${cats.join('·')}] ` : '';
         const vendorText = ev.vendor ? `(${ev.vendor}) ` : '';
         evDiv.title = `[${ev.product}] ${subText}${vendorText}${ev.title} (${ev.note || ''})`;
-        evDiv.innerHTML = `<strong>${ev.product}</strong><br>${subText}${vendorText}${ev.title}`;
+        evDiv.innerHTML = `<strong>${esc(ev.product)}</strong><br>${esc(subText)}${esc(vendorText)}${esc(ev.title)}`;
         evDiv.onclick = (e) => { e.stopPropagation(); loadScheduleForEdit(ev.id); };
         cellDiv.appendChild(evDiv);
       });
@@ -586,12 +864,12 @@
   }
 
   function moveMonth(delta) {
-    if (delta === 0) calDate = new Date();
-    else calDate.setMonth(calDate.getMonth() + delta);
+    const base = delta === 0 ? new Date() : calDate;
+    calDate = new Date(base.getFullYear(), base.getMonth() + delta, 1);
     renderCalendar();
   }
 
-  // 2. 제품별 공정표
+  /* ---------------- 2. 제품별 공정표 ---------------- */
   function renderTimeline() {
     const container = document.getElementById('timeline-content');
     container.innerHTML = '';
@@ -624,7 +902,7 @@
 
       const laneDiv = document.createElement('div');
       laneDiv.className = 'product-lane';
-      laneDiv.innerHTML = `<div class="lane-header"><span>📦 ${prodName}</span><span style="font-size:11px; color:var(--text-sub); font-weight:500;">* 입고일이 빠른 공정이 앞으로 자동 배치됩니다.</span></div>`;
+      laneDiv.innerHTML = `<div class="lane-header"><span>📦 ${esc(prodName)}</span><span style="font-size:11px; color:var(--text-sub); font-weight:500;">* 입고일이 빠른 공정이 앞으로 자동 배치됩니다.</span></div>`;
       
       const stagesGrid = document.createElement('div');
       stagesGrid.className = 'lane-stages';
@@ -644,16 +922,16 @@
         if (conf.items.length > 0) {
           conf.items.forEach(item => {
             const subCatHtml = renderSubCatBadges(item);
-            const vendorHtml = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '';
+            const vendorHtml = item.vendor ? `<span class="vendor-badge">🏢 ${esc(item.vendor)}</span>` : '';
             
             stageContent += `
-              <div class="stage-item ${item.type} ${item.status === '완료' ? 'done' : ''}" onclick="loadScheduleForEdit(${item.id})">
+              <div class="stage-item ${item.type} ${item.status === '완료' ? 'done' : ''}" onclick="loadScheduleForEdit('${item.id}')">
                 ${subCatHtml ? `<div class="s-badges">${subCatHtml}</div>` : ''}
-                <div class="s-title">${item.title}</div>
+                <div class="s-title">${esc(item.title)}</div>
                 ${vendorHtml ? `<div class="s-meta">${vendorHtml}</div>` : ''}
-                <div class="s-date">📅 ${item.start} ~ ${item.end}</div>
-                ${item.note ? `<div class="s-note">📝 ${item.note}</div>` : ''}
-                <div class="s-status">${item.status}</div>
+                <div class="s-date">📅 ${esc(item.start)} ~ ${esc(item.end)}</div>
+                ${item.note ? `<div class="s-note">📝 ${esc(item.note)}</div>` : ''}
+                <div class="s-status">${esc(item.status)}</div>
               </div>
             `;
           });
@@ -669,7 +947,7 @@
     });
   }
 
-  // 3. 다이어그램 뷰
+  /* ---------------- 3. 다이어그램 뷰 ---------------- */
   function renderDiagram() {
       const container = document.getElementById('diagram-content');
       container.innerHTML = '';
@@ -702,7 +980,7 @@
 
           const block = document.createElement('div');
           block.className = 'diag-product-block';
-          block.innerHTML = `<div class="diag-prod-title">${prod}</div>`;
+          block.innerHTML = `<div class="diag-prod-title">${esc(prod)}</div>`;
 
           const flowDiv = document.createElement('div');
           flowDiv.className = 'diag-flow';
@@ -722,13 +1000,13 @@
               if (stage.items.length > 0) {
                   stage.items.forEach(item => {
                       const subCatHtml = renderSubCatBadges(item);
-                      const vendorStr = item.vendor ? `<div style="margin-top:3px;"><span class="vendor-badge">🏢 ${item.vendor}</span></div>` : '';
+                      const vendorStr = item.vendor ? `<div style="margin-top:3px;"><span class="vendor-badge">🏢 ${esc(item.vendor)}</span></div>` : '';
                       boxHtml += `
                           <div class="diag-item-card">
                               ${subCatHtml ? `<div>${subCatHtml}</div>` : ''}
-                              <div class="diag-title">${item.title}</div>
+                              <div class="diag-title">${esc(item.title)}</div>
                               ${vendorStr}
-                              <div class="diag-date">📅 ${item.start} ~ ${item.end}</div>
+                              <div class="diag-date">📅 ${esc(item.start)} ~ ${esc(item.end)}</div>
                           </div>
                       `;
                   });
@@ -752,7 +1030,7 @@
       });
   }
 
-  // 4. 리스트 뷰
+  /* ---------------- 4. 리스트 뷰 ---------------- */
   function renderList() {
     const tbody = document.getElementById('list-content');
     tbody.innerHTML = '';
@@ -764,7 +1042,7 @@
 
       const isDone = item.status === '완료';
       const subCatBadges = renderSubCatBadges(item);
-      const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${item.vendor}</span>` : '-';
+      const vendorDisplay = item.vendor ? `<span class="vendor-badge">🏢 ${esc(item.vendor)}</span>` : '-';
       const checkLabel = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
       
       const tr = document.createElement('tr');
@@ -773,46 +1051,44 @@
       tr.innerHTML = `
         <td>
           <label class="receive-chk-wrap">
-            <input type="checkbox" class="receive-chk" ${isDone ? 'checked' : ''} onchange="toggleReceiveStatus(${item.id}, this.checked)">
+            <input type="checkbox" class="receive-chk" ${isDone ? 'checked' : ''} onchange="toggleReceiveStatus('${item.id}', this.checked)">
             <span class="${isDone ? 'receive-label-done' : 'receive-label-wait'}">${checkLabel}</span>
           </label>
         </td>
-        <td style="font-weight:800;">${item.product}</td>
-        <td><span class="badge ${item.type}">${typeInfoMap[item.type]}</span><br>${subCatBadges}</td>
+        <td style="font-weight:800;">${esc(item.product)}</td>
+        <td><span class="badge ${esc(item.type)}">${esc(typeInfoMap[item.type])}</span><br>${subCatBadges}</td>
         <td>${vendorDisplay}</td>
-        <td class="title-cell" style="font-weight:600;">${item.title}</td>
-        <td style="color:var(--text-sub); font-weight:600;">${item.start} ~ ${item.end}</td>
-        <td>${item.note || '-'}</td>
+        <td class="title-cell" style="font-weight:600;">${esc(item.title)}</td>
+        <td style="color:var(--text-sub); font-weight:600;">${esc(item.start)} ~ ${esc(item.end)}</td>
+        <td>${item.note ? esc(item.note) : '-'}</td>
         <td>
-          <select onchange="updateStatusInline(${item.id}, this.value)" style="padding:3px 6px; font-size:11px; border-radius:4px; height:auto;">
+          <select onchange="updateStatusInline('${item.id}', this.value)" style="padding:3px 6px; font-size:11px; border-radius:4px; height:auto;">
             <option value="예정" ${item.status === '예정' ? 'selected' : ''}>예정</option>
             <option value="진행중" ${item.status === '진행중' ? 'selected' : ''}>진행중</option>
             <option value="완료" ${item.status === '완료' ? 'selected' : ''}>완료</option>
           </select>
         </td>
+        <td class="last-edit">${esc(shortName(item.updatedBy))}<br>${esc(fmtStamp(item.updatedAt))}</td>
         <td class="row-actions">
-          <button class="icon-btn" title="수정" onclick="loadScheduleForEdit(${item.id})">&#9998;</button>
-          <button class="icon-btn" title="삭제" onclick="deleteSchedule(${item.id})">&#128465;</button>
+          <button class="icon-btn" title="수정" onclick="loadScheduleForEdit('${item.id}')">&#9998;</button>
+          <button class="icon-btn" title="삭제" onclick="deleteSchedule('${item.id}')">&#128465;</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
-
-  function toggleReceiveStatus(id, isChecked) {
-    const item = schedules.find(s => s.id === id);
-    if (item) {
-      item.status = isChecked ? '완료' : '예정';
-      saveAll();
+  /* ---------------- 폼 입력 처리 ---------------- */
+  async function handleFormSubmit() {
+    if (!validateForm()) return;
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    try {
+      if (isEditMode) await updateSchedule();
+      else await addSchedule();
+    } finally {
+      btn.disabled = false;
     }
-  }
-
-  function handleFormSubmit() {
-    if(!validateForm()) return;
-    if (isEditMode) updateSchedule();
-    else addSchedule();
   }
 
   function validateForm() {
@@ -873,7 +1149,7 @@
     document.getElementById('title').value = data.title;
     document.getElementById('startDate').value = data.start;
     document.getElementById('endDate').value = data.end;
-    document.getElementById('note').value = data.note;
+    document.getElementById('note').value = data.note || '';
   }
 
   function resetForm() {
@@ -893,19 +1169,10 @@
     document.getElementById('vendor').value = '';
     document.getElementById('title').value = '';
     document.getElementById('note').value = '';
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayStr();
     document.getElementById('startDate').value = today;
     document.getElementById('endDate').value = today;
     isEditMode = false;
-  }
-
-  function addSchedule() {
-    const newItem = getFormData();
-    newItem.id = Date.now();
-    newItem.status = '예정';
-    schedules.push(newItem);
-    resetForm();
-    saveAll();
   }
 
   function loadScheduleForEdit(id) {
@@ -927,33 +1194,13 @@
     resetForm();
   }
 
-  function updateSchedule() {
-    const id = parseInt(document.getElementById('edit-id').value);
-    const index = schedules.findIndex(s => s.id === id);
-    if (index === -1) return;
-
-    const updatedData = getFormData();
-    schedules[index] = { id, ...updatedData, status: schedules[index].status };
-
-    resetForm();
-    saveAll();
-  }
-
-  function updateStatusInline(id, newStatus) {
-    const item = schedules.find(s => s.id === id);
-    if(item) {
-      item.status = newStatus;
-      saveAll();
-    }
-  }
-
-  function deleteSchedule(id) {
-    if(confirm('정말로 이 일정을 삭제하시겠습니까?')) {
-      schedules = schedules.filter(s => s.id !== id);
-      resetForm();
-      saveAll();
-    }
-  }
+  /* ---------------- HTML의 onclick에서 쓸 수 있도록 공개 ---------------- */
+  Object.assign(window, {
+    toggleSubInputs, syncPillStyles, handleFormSubmit, cancelEdit,
+    switchView, setFilter, moveMonth, exportToExcelCSV,
+    loadScheduleForEdit, toggleReceiveStatus, updateStatusInline, deleteSchedule,
+    migrateLocalData, doLogout
+  });
 
   resetForm();
   renderAll();
