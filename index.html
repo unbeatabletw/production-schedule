@@ -15,9 +15,6 @@
       --color-sub: #2563eb;      /* 부자재 (파랑) */
       --bg-sub: #eff6ff;
 
-      --color-semi: #d97706;     /* 반제품 (주황) */
-      --bg-semi: #fffbeb;
-
       --color-pack: #059669;     /* 포장 (초록) */
       --bg-pack: #ecfdf5;
       
@@ -69,13 +66,13 @@
     input:focus, select:focus { outline: 2px solid var(--color-accent); border-color: transparent; }
     input:disabled, select:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
     
-    /* 부자재 다중 선택 체크박스 그룹 */
+    /* 하위 분류 선택 (부자재 종류 다중선택 / 포장 장소 단일선택) */
     .multi-select-box { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 35px; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 6px; background: #fff; }
-    .multi-select-box.disabled { background: #f3f4f6; opacity: 0.6; pointer-events: none; }
     .chk-pill { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px; border: 1px solid #d1d5db; background: #f9fafb; color: #4b5563; cursor: pointer; user-select: none; transition: 0.15s; }
     .chk-pill:hover { background: #f3f4f6; }
     .chk-pill input { display: none; }
     .chk-pill.checked { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+    #packSite-group .chk-pill.checked { background: #ecfdf5; border-color: #10b981; color: #047857; }
 
     button.action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; height: 35px; font-size: 13px; white-space: nowrap; }
     button.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -102,13 +99,16 @@
     .view-panel.active { display: block; }
     .panel-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; padding: 20px; }
 
-    /* 부자재 5종 세부 뱃지 스타일 */
+    /* 세부 분류 뱃지 스타일 (부자재 6종 + 포장 장소 2종) */
     .subcat-badge { font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block; margin-right: 3px; margin-bottom: 2px; }
     .subcat-케이스 { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
     .subcat-카드 { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
     .subcat-트레이 { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
     .subcat-원단 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
     .subcat-성형물 { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+    .subcat-반제품 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .subcat-파주 { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .subcat-김포 { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 
     .vendor-badge { background: #f1f5f9; color: #334155; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; display: inline-block; border: 1px solid #cbd5e1; }
 
@@ -128,7 +128,6 @@
     .cal-event { padding: 4px 5px; border-radius: 4px; margin-bottom: 3px; cursor: pointer; border-left: 3px solid transparent; font-weight: 600; line-height: 1.3; }
     .cal-event:hover { filter: brightness(0.95); }
     .cal-event.sub { background: var(--bg-sub); color: var(--color-sub); border-left-color: var(--color-sub); }
-    .cal-event.semi { background: var(--bg-semi); color: var(--color-semi); border-left-color: var(--color-semi); }
     .cal-event.pack { background: var(--bg-pack); color: var(--color-pack); border-left-color: var(--color-pack); }
     .cal-event.done { opacity: 0.55; text-decoration: line-through; }
 
@@ -136,19 +135,17 @@
     .product-timeline-container { display: flex; flex-direction: column; gap: 20px; }
     .product-lane { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
     .lane-header { font-size: 15px; font-weight: 800; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
-    .lane-stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; position: relative; }
-    .lane-stages::before { content: ''; position: absolute; top: 40%; left: 15%; right: 15%; height: 2px; background: #e5e7eb; z-index: 0; }
+    .lane-stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; position: relative; }
+    .lane-stages::before { content: ''; position: absolute; top: 40%; left: 25%; right: 25%; height: 2px; background: #e5e7eb; z-index: 0; }
     
     .stage { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; z-index: 1; position: relative; }
     .stage-type-label { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: flex; justify-content: space-between; }
     .stage-box.sub .stage-type-label { color: var(--color-sub); }
-    .stage-box.semi .stage-type-label { color: var(--color-semi); }
     .stage-box.pack .stage-type-label { color: var(--color-pack); }
     
     .stage-item { background: #f9fafb; border-radius: 6px; padding: 8px; margin-bottom: 8px; border-left: 3px solid #d1d5db; position: relative; cursor: pointer; }
     .stage-item:hover { background: #f3f4f6; }
     .stage-item.sub { border-left-color: var(--color-sub); }
-    .stage-item.semi { border-left-color: var(--color-semi); }
     .stage-item.pack { border-left-color: var(--color-pack); }
     .stage-item.done { opacity: 0.6; }
     
@@ -176,7 +173,6 @@
 
     .badge { padding: 3px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; display: inline-block; margin-bottom: 2px; }
     .badge.sub { background: var(--bg-sub); color: var(--color-sub); }
-    .badge.semi { background: var(--bg-semi); color: var(--color-semi); }
     .badge.pack { background: var(--bg-pack); color: var(--color-pack); }
     .row-actions { display: flex; gap: 6px; }
     .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; opacity: 0.75; font-size: 14px; }
@@ -191,12 +187,10 @@
     .diag-flow { display: flex; align-items: stretch; justify-content: center; gap: 15px; flex-wrap: wrap; }
     .diag-box { width: 265px; border-radius: 10px; padding: 14px; border: 2px solid; background: #fff; display: flex; flex-direction: column; gap: 6px; }
     .diag-box.sub { background: var(--bg-sub); border-color: var(--color-sub); }
-    .diag-box.semi { background: var(--bg-semi); border-color: var(--color-semi); }
     .diag-box.pack { background: var(--bg-pack); border-color: var(--color-pack); }
     
     .diag-type { font-size: 11px; font-weight: 800; }
     .diag-box.sub .diag-type { color: var(--color-sub); }
-    .diag-box.semi .diag-type { color: var(--color-semi); }
     .diag-box.pack .diag-type { color: var(--color-pack); }
 
     .diag-item-card { background: #fff; padding: 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); font-size: 11px; }
@@ -238,9 +232,8 @@
     <h1>🏭 생산·입고 통합 일정 관리</h1>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <div class="legend">
-        <div class="legend-item"><span class="dot" style="background: var(--color-sub);"></span>부자재 (케이스·카드·트레이·원단·성형물)</div>
-        <div class="legend-item"><span class="dot" style="background: var(--color-semi);"></span>반제품 (선행 입고 우선 정렬)</div>
-        <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장</div>
+        <div class="legend-item"><span class="dot" style="background: var(--color-sub);"></span>부자재 (케이스·카드·트레이·원단·성형물·반제품)</div>
+        <div class="legend-item"><span class="dot" style="background: var(--color-pack);"></span>포장 (파주·김포)</div>
       </div>
       <button type="button" class="excel-btn" onclick="exportToExcelCSV()">📊 수량·일정 엑셀 다운로드</button>
       <button type="button" class="migrate-btn" id="migrate-btn" onclick="migrateLocalData()">📥 이 브라우저의 기존 데이터 올리기</button>
@@ -269,18 +262,24 @@
         <label>구분</label>
         <select id="type" onchange="toggleSubInputs()">
           <option value="sub">부자재 입고</option>
-          <option value="semi">반제품 입고</option>
           <option value="pack">포장 일정</option>
         </select>
       </div>
       <div class="form-group">
-        <label>부자재 종류 (다중선택)</label>
+        <label id="cat-label">부자재 종류 (다중선택)</label>
+        <!-- 부자재 입고: 종류 다중선택 (반제품 포함) -->
         <div class="multi-select-box" id="subCategory-group">
           <label class="chk-pill"><input type="checkbox" name="subCat" value="케이스" onchange="syncPillStyles()">케이스</label>
           <label class="chk-pill"><input type="checkbox" name="subCat" value="카드" onchange="syncPillStyles()">카드</label>
           <label class="chk-pill"><input type="checkbox" name="subCat" value="트레이" onchange="syncPillStyles()">트레이</label>
           <label class="chk-pill"><input type="checkbox" name="subCat" value="원단" onchange="syncPillStyles()">원단</label>
           <label class="chk-pill"><input type="checkbox" name="subCat" value="성형물" onchange="syncPillStyles()">성형물</label>
+          <label class="chk-pill"><input type="checkbox" name="subCat" value="반제품" onchange="syncPillStyles()">반제품</label>
+        </div>
+        <!-- 포장 일정: 장소 단일선택 -->
+        <div class="multi-select-box" id="packSite-group" style="display:none;">
+          <label class="chk-pill"><input type="radio" name="packSite" value="파주" onchange="syncPillStyles()">파주</label>
+          <label class="chk-pill"><input type="radio" name="packSite" value="김포" onchange="syncPillStyles()">김포</label>
         </div>
       </div>
       <div class="form-group">
@@ -325,9 +324,11 @@
       <button class="filter-btn" onclick="setFilter('sub:트레이', this)">트레이</button>
       <button class="filter-btn" onclick="setFilter('sub:원단', this)">원단</button>
       <button class="filter-btn" onclick="setFilter('sub:성형물', this)">성형물</button>
+      <button class="filter-btn" onclick="setFilter('sub:반제품', this)">반제품</button>
       <span class="filter-divider"></span>
-      <button class="filter-btn" onclick="setFilter('semi', this)">반제품</button>
-      <button class="filter-btn" onclick="setFilter('pack', this)">포장</button>
+      <button class="filter-btn" onclick="setFilter('pack', this)">포장 전체</button>
+      <button class="filter-btn" onclick="setFilter('pack:파주', this)">파주</button>
+      <button class="filter-btn" onclick="setFilter('pack:김포', this)">김포</button>
     </div>
   </div>
 
@@ -361,7 +362,7 @@
         <tr>
           <th style="width: 95px;">입고여부</th>
           <th>제품명</th>
-          <th>구분 / 부자재 종류</th>
+          <th>구분 / 세부 분류</th>
           <th>협력사</th>
           <th>세부 품목 / 작업명</th>
           <th>일정 기간</th>
@@ -413,7 +414,7 @@
   calDate = new Date(calDate.getFullYear(), calDate.getMonth(), 1);
   let isEditMode = false;
 
-  const typeInfoMap = { 'sub': '부자재', 'semi': '반제품', 'pack': '포장' };
+  const typeInfoMap = { 'sub': '부자재', 'pack': '포장' };
 
   /* ---------------- 공통 유틸 ---------------- */
   function esc(v) {
@@ -442,9 +443,26 @@
     return [];
   }
 
+  // 구분에 따른 세부 분류 목록 (부자재: 종류들 / 포장: 장소)
+  function getItemCats(item) {
+    if (item.type === 'pack') return item.packSite ? [item.packSite] : [];
+    return getItemSubCats(item);
+  }
+
+  // 예전 데이터 호환: '반제품 입고'로 저장된 일정은 '부자재 입고 + 반제품 종류'로 자동 변환
+  function normalizeItem(item) {
+    if (item.type === 'semi') {
+      const cats = getItemSubCats(item);
+      return { ...item, type: 'sub', subCategories: cats.includes('반제품') ? cats : [...cats, '반제품'] };
+    }
+    return item;
+  }
+
   function renderSubCatBadges(item) {
-    const cats = getItemSubCats(item);
-    return cats.map(c => `<span class="subcat-badge subcat-${esc(c)}">${esc(c)}</span>`).join('');
+    if (item.type === 'pack') {
+      return item.packSite ? `<span class="subcat-badge subcat-${esc(item.packSite)}">📍 ${esc(item.packSite)}</span>` : '';
+    }
+    return getItemSubCats(item).map(c => `<span class="subcat-badge subcat-${esc(c)}">${esc(c)}</span>`).join('');
   }
 
   function setSync(text) {
@@ -499,7 +517,7 @@
     stopListening();
     setSync('연결 중...');
     unsubscribe = onSnapshot(collection(db, COLLECTION), (snap) => {
-      schedules = snap.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+      schedules = snap.docs.map(d => normalizeItem({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
       setSync('🟢 실시간 동기화 중');
       renderAll();
     }, (err) => {
@@ -630,11 +648,13 @@
     try {
       for (let i = 0; i < local.length; i += 400) {
         const batch = writeBatch(db);
-        local.slice(i, i + 400).forEach(item => {
+        local.slice(i, i + 400).forEach(raw => {
+          const item = normalizeItem(raw);
           batch.set(doc(collection(db, COLLECTION)), {
             product: item.product || '',
             type: item.type || 'sub',
-            subCategories: getItemSubCats(item),
+            subCategories: item.type === 'sub' ? getItemSubCats(item) : [],
+            packSite: item.type === 'pack' ? (item.packSite || '') : '',
             vendor: item.vendor || '',
             title: item.title || '',
             start: item.start || '',
@@ -658,34 +678,36 @@
 
   /* ---------------- 폼 ---------------- */
   function syncPillStyles() {
-    document.querySelectorAll('#subCategory-group .chk-pill').forEach(label => {
-      const cb = label.querySelector('input[type="checkbox"]');
-      if (cb.checked) label.classList.add('checked');
-      else label.classList.remove('checked');
+    document.querySelectorAll('.multi-select-box .chk-pill').forEach(label => {
+      const input = label.querySelector('input');
+      label.classList.toggle('checked', input.checked);
     });
   }
 
   function toggleSubInputs() {
     const type = document.getElementById('type').value;
-    const subCatGroup = document.getElementById('subCategory-group');
+    const isSub = type === 'sub';
+    const isPack = type === 'pack';
     const vendorInput = document.getElementById('vendor');
-    
-    if (type !== 'sub') {
-      subCatGroup.classList.add('disabled');
+
+    document.getElementById('subCategory-group').style.display = isSub ? 'flex' : 'none';
+    document.getElementById('packSite-group').style.display = isPack ? 'flex' : 'none';
+    document.getElementById('cat-label').innerText = isPack ? '포장 장소 (하위 분류)' : '부자재 종류 (다중선택)';
+
+    if (!isSub) {
       vendorInput.value = '';
       vendorInput.disabled = true;
     } else {
-      subCatGroup.classList.remove('disabled');
       vendorInput.disabled = false;
     }
   }
 
   function matchFilter(item) {
     if (currentFilter === 'all') return true;
-    if (currentFilter.startsWith('sub:')) {
-      const targetSubCat = currentFilter.split(':')[1];
-      const cats = getItemSubCats(item);
-      return item.type === 'sub' && cats.includes(targetSubCat);
+    if (currentFilter.includes(':')) {
+      const [t, v] = currentFilter.split(':');
+      if (t === 'sub') return item.type === 'sub' && getItemSubCats(item).includes(v);
+      if (t === 'pack') return item.type === 'pack' && item.packSite === v;
     }
     return item.type === currentFilter;
   }
@@ -747,7 +769,7 @@
       return;
     }
 
-    const headers = ['입고/완료여부', '제품명', '구분', '부자재종류', '협력사', '세부품목/작업명', '시작일', '종료일', '수량(숫자)', '단위', '원본비고', '진행상태'];
+    const headers = ['입고/완료여부', '제품명', '구분', '부자재종류', '포장장소', '협력사', '세부품목/작업명', '시작일', '종료일', '수량(숫자)', '단위', '원본비고', '진행상태'];
     
     const escapeCSV = (val) => {
       const str = String(val ?? '');
@@ -760,7 +782,8 @@
     const rows = targetData.map(item => {
       const isDone = item.status === '완료';
       const checkText = item.type === 'pack' ? (isDone ? '완료' : '미완료') : (isDone ? '입고완료' : '미입고');
-      const subCats = getItemSubCats(item).join(' / ');
+      const subCats = item.type === 'sub' ? getItemSubCats(item).join(' / ') : '';
+      const packSite = item.type === 'pack' ? (item.packSite || '') : '';
       const { qty, unit } = parseQtyAndUnit(item.note);
 
       return [
@@ -768,6 +791,7 @@
         item.product,
         typeInfoMap[item.type] || item.type,
         subCats,
+        packSite,
         item.vendor || '',
         item.title,
         item.start,
@@ -835,7 +859,7 @@
       dayEvents.forEach(ev => {
         const evDiv = document.createElement('div');
         evDiv.className = `cal-event ${ev.type} ${ev.status === '완료' ? 'done' : ''}`;
-        const cats = getItemSubCats(ev);
+        const cats = getItemCats(ev);
         const subText = cats.length ? `[${cats.join('·')}] ` : '';
         const vendorText = ev.vendor ? `(${ev.vendor}) ` : '';
         evDiv.title = `[${ev.product}] ${subText}${vendorText}${ev.title} (${ev.note || ''})`;
@@ -886,31 +910,18 @@
       if(prodSchedules.length === 0) return;
 
       const subItems = prodSchedules.filter(s => s.type === 'sub').sort((a, b) => new Date(a.start) - new Date(b.start));
-      const semiItems = prodSchedules.filter(s => s.type === 'semi').sort((a, b) => new Date(a.start) - new Date(b.start));
       const packItems = prodSchedules.filter(s => s.type === 'pack').sort((a, b) => new Date(a.start) - new Date(b.start));
-
-      const earliestSubStart = subItems.length > 0 ? new Date(subItems[0].start) : new Date('9999-12-31');
-      const earliestSemiStart = semiItems.length > 0 ? new Date(semiItems[0].start) : new Date('9999-12-31');
-
-      let firstTitle = '1. 부자재 입고 (선행)', firstItems = subItems, firstKey = 'sub';
-      let secondTitle = '2. 반제품 입고 (후행)', secondItems = semiItems, secondKey = 'semi';
-
-      if (earliestSemiStart < earliestSubStart) {
-        firstTitle = '1. 반제품 입고 (선행)'; firstItems = semiItems; firstKey = 'semi';
-        secondTitle = '2. 부자재 입고 (후행)'; secondItems = subItems; secondKey = 'sub';
-      }
 
       const laneDiv = document.createElement('div');
       laneDiv.className = 'product-lane';
-      laneDiv.innerHTML = `<div class="lane-header"><span>📦 ${esc(prodName)}</span><span style="font-size:11px; color:var(--text-sub); font-weight:500;">* 입고일이 빠른 공정이 앞으로 자동 배치됩니다.</span></div>`;
+      laneDiv.innerHTML = `<div class="lane-header"><span>📦 ${esc(prodName)}</span></div>`;
       
       const stagesGrid = document.createElement('div');
       stagesGrid.className = 'lane-stages';
 
       const stagesConfig = [
-        { key: firstKey, title: firstTitle, items: firstItems },
-        { key: secondKey, title: secondTitle, items: secondItems },
-        { key: 'pack', title: '3. 포장 / 생산 일정', items: packItems }
+        { key: 'sub', title: '1. 부자재 입고 (반제품 포함)', items: subItems },
+        { key: 'pack', title: '2. 포장 / 생산 일정', items: packItems }
       ];
 
       stagesConfig.forEach(conf => {
@@ -964,19 +975,7 @@
           if (prodItems.length === 0) return;
           
           const subItems = prodItems.filter(s => s.type === 'sub').sort((a, b) => new Date(a.start) - new Date(b.start));
-          const semiItems = prodItems.filter(s => s.type === 'semi').sort((a, b) => new Date(a.start) - new Date(b.start));
           const packItems = prodItems.filter(s => s.type === 'pack').sort((a, b) => new Date(a.start) - new Date(b.start));
-
-          const earliestSubStart = subItems.length > 0 ? new Date(subItems[0].start) : new Date('9999-12-31');
-          const earliestSemiStart = semiItems.length > 0 ? new Date(semiItems[0].start) : new Date('9999-12-31');
-
-          let firstStage = { key: 'sub', label: '1. 부자재 입고', items: subItems };
-          let secondStage = { key: 'semi', label: '2. 반제품 입고', items: semiItems };
-
-          if (earliestSemiStart < earliestSubStart) {
-            firstStage = { key: 'semi', label: '1. 반제품 입고', items: semiItems };
-            secondStage = { key: 'sub', label: '2. 부자재 입고', items: subItems };
-          }
 
           const block = document.createElement('div');
           block.className = 'diag-product-block';
@@ -986,9 +985,8 @@
           flowDiv.className = 'diag-flow';
 
           const stages = [
-              firstStage,
-              secondStage,
-              { key: 'pack', label: '3. 포장 / 생산', items: packItems }
+              { key: 'sub', label: '1. 부자재 입고 (반제품 포함)', items: subItems },
+              { key: 'pack', label: '2. 포장 / 생산', items: packItems }
           ];
 
           stages.forEach((stage, index) => {
@@ -1105,7 +1103,13 @@
       if (type === 'sub') {
           const checkedCats = document.querySelectorAll('input[name="subCat"]:checked');
           if (checkedCats.length === 0) {
-              alert('부자재 종류(케이스, 카드, 트레이, 원단, 성형물)를 최소 1개 이상 선택해주세요.');
+              alert('부자재 종류(케이스, 카드, 트레이, 원단, 성형물, 반제품)를 최소 1개 이상 선택해주세요.');
+              return false;
+          }
+      }
+      if (type === 'pack') {
+          if (!document.querySelector('input[name="packSite"]:checked')) {
+              alert('포장 장소(파주 / 김포)를 선택해주세요.');
               return false;
           }
       }
@@ -1121,11 +1125,13 @@
     const selectedCats = type === 'sub'
       ? Array.from(document.querySelectorAll('input[name="subCat"]:checked')).map(cb => cb.value)
       : [];
+    const packChecked = document.querySelector('input[name="packSite"]:checked');
 
     return {
       product: document.getElementById('product').value.trim(),
       type: type,
       subCategories: selectedCats,
+      packSite: type === 'pack' && packChecked ? packChecked.value : '',
       vendor: type === 'sub' ? document.getElementById('vendor').value.trim() : '',
       title: document.getElementById('title').value.trim(),
       start: document.getElementById('startDate').value,
@@ -1142,6 +1148,9 @@
     const cats = getItemSubCats(data);
     document.querySelectorAll('input[name="subCat"]').forEach(cb => {
       cb.checked = (data.type === 'sub' && cats.includes(cb.value));
+    });
+    document.querySelectorAll('input[name="packSite"]').forEach(rb => {
+      rb.checked = (data.type === 'pack' && data.packSite === rb.value);
     });
     syncPillStyles();
 
@@ -1162,6 +1171,9 @@
 
     document.querySelectorAll('input[name="subCat"]').forEach(cb => {
       cb.checked = (cb.value === '케이스');
+    });
+    document.querySelectorAll('input[name="packSite"]').forEach(rb => {
+      rb.checked = (rb.value === '파주');
     });
     syncPillStyles();
     toggleSubInputs();
